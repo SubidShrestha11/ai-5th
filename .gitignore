@@ -1,0 +1,59 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Package build artifacts
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Database
+*.sqlite3
+db.sqlite3
+
+# Environment & secrets — never commit these
+.env
+.env.*
+*.env
+
+# Django migrations (keep migrations, but ignore compiled versions)
+*/migrations/*.pyc
+
+# Test & coverage artifacts
+.coverage
+htmlcov/
+.pytest_cache/
+coverage.xml
+
+# Static & media (collected/uploaded files — not source)
+staticfiles/
+media/
+
+# Logs
+*.log
+logs/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Editor noise
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Celery (for when task queues are added)
+celerybeat-schedule
+celerybeat.pid
+
+.cursorrules
+.cursorignore
