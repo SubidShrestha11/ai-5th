@@ -212,3 +212,55 @@ class FriendServicesTests(FriendsAPITestMixin, APITestCase):
 
     def test_are_friends_returns_false_without_accepted_request(self) -> None:
         self.assertFalse(services.are_friends(self.user_a, self.user_b))
+
+
+class FriendMovieLogListTests(FriendsAPITestMixin, APITestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        from datetime import date
+
+        from movies.models import Movie, MovieLog
+
+        FriendRequest.objects.create(
+            sender=self.user_a,
+            receiver=self.user_b,
+            status=FriendRequestStatus.ACCEPTED,
+        )
+        self.movie = Movie.objects.create(
+            tmdb_id=550,
+            title="Fight Club",
+            overview="An insomniac office worker...",
+        )
+        self.log = MovieLog.objects.create(
+            user=self.user_b,
+            movie=self.movie,
+            watched_date=date(2024, 1, 15),
+            rating=4.5,
+            review_text="Great film.",
+        )
+        self.url = reverse("friend-movie-logs", kwargs={"user_id": self.user_b.id})
+
+    def test_friend_movie_logs_success(self) -> None:
+        self.authenticate(self.user_a)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["id"], str(self.log.id))
+        self.assertEqual(response.data["results"][0]["movie"]["title"], "Fight Club")
+
+    def test_friend_movie_logs_unauthenticated(self) -> None:
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_friend_movie_logs_not_friends_returns_403(self) -> None:
+        self.authenticate(self.user_c)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_friend_movie_logs_unknown_user_returns_404(self) -> None:
+        import uuid
+
+        self.authenticate(self.user_a)
+        url = reverse("friend-movie-logs", kwargs={"user_id": uuid.uuid4()})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

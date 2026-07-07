@@ -189,3 +189,21 @@ def update_movie_log(log: MovieLog, validated_data: dict) -> MovieLog:
             setattr(log, field, validated_data[field])
     log.save()
     return log
+
+
+def get_user_movie_logs(user_id):
+    return (
+        MovieLog.objects.filter(user_id=user_id)
+        .select_related("movie")
+        .order_by("-watched_date", "-created_at")
+    )
+
+
+def get_movie_logs_for_users(user_ids):
+    if not user_ids:
+        return MovieLog.objects.none()
+    return (
+        MovieLog.objects.filter(user_id__in=user_ids)
+        .select_related("movie", "user")
+        .order_by("-created_at")
+    )

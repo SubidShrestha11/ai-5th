@@ -131,6 +131,725 @@
         }
       }
     },
+    "/api/v1/feed/": {
+      "get": {
+        "operationId": "v1_feed_list",
+        "description": "Chronological feed of movie logs from your friends, ordered by most recently posted activity.",
+        "summary": "Friend activity feed",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "tags": ["Feed"],
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedFeedActivityList"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v1/friends/": {
+      "get": {
+        "operationId": "v1_friends_list",
+        "summary": "List all friends",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "tags": ["Friends"],
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedFriendUserList"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v1/friends/{user_id}/": {
+      "delete": {
+        "operationId": "v1_friends_destroy",
+        "summary": "Remove a friend",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": ["Friends"],
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Friend removed"
+          },
+          "404": {
+            "description": "Friend not found"
+          }
+        }
+      }
+    },
+    "/api/v1/friends/{user_id}/logs/": {
+      "get": {
+        "operationId": "v1_friends_logs_list",
+        "summary": "View a friend's movie logs",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": ["Friends"],
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedMovieLogList"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "description": "Not friends with this user"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/api/v1/friends/request/": {
+      "post": {
+        "operationId": "v1_friends_request_create",
+        "summary": "Send a friend request",
+        "tags": ["Friends"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FriendRequestCreateRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/FriendRequestCreateRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/FriendRequestCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendRequest"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/api/v1/friends/request/{request_id}/": {
+      "patch": {
+        "operationId": "v1_friends_request_partial_update",
+        "summary": "Accept or decline a friend request",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": ["Friends"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedFriendRequestActionRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedFriendRequestActionRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedFriendRequestActionRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendRequest"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Only the receiver may respond"
+          },
+          "404": {
+            "description": "Friend request not found"
+          }
+        }
+      }
+    },
+    "/api/v1/friends/requests/": {
+      "get": {
+        "operationId": "v1_friends_requests_list",
+        "summary": "List pending friend requests",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "direction",
+            "schema": {
+              "type": "string",
+              "enum": ["incoming", "outgoing"]
+            },
+            "description": "Filter by request direction"
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "tags": ["Friends"],
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedFriendRequestList"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/v1/movies/{tmdb_id}/": {
+      "get": {
+        "operationId": "v1_movies_retrieve",
+        "summary": "Get TMDB movie details",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tmdb_id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "tags": ["Movies"],
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TMDBMovieDetail"
+                }
+              }
+            },
+            "description": ""
+          },
+          "502": {
+            "description": "TMDB fetch failed"
+          }
+        }
+      }
+    },
+    "/api/v1/movies/logs/": {
+      "get": {
+        "operationId": "v1_movies_logs_list",
+        "summary": "List your movie logs",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "tags": ["Movies"],
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedMovieLogList"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      },
+      "post": {
+        "operationId": "v1_movies_logs_create",
+        "summary": "Log a watched movie",
+        "tags": ["Movies"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MovieLogCreateRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/MovieLogCreateRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/MovieLogCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MovieLog"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/api/v1/movies/logs/{log_id}/": {
+      "get": {
+        "operationId": "v1_movies_logs_retrieve",
+        "summary": "Get a movie log entry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "log_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": ["Movies"],
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MovieLog"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      },
+      "put": {
+        "operationId": "v1_movies_logs_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "log_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": ["v1"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MovieLogRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/MovieLogRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/MovieLogRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MovieLog"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      },
+      "patch": {
+        "operationId": "v1_movies_logs_partial_update",
+        "summary": "Update a movie log (review, rating, date)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "log_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": ["Movies"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedMovieLogRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedMovieLogRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedMovieLogRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MovieLog"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      },
+      "delete": {
+        "operationId": "v1_movies_logs_destroy",
+        "summary": "Delete a movie log entry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "log_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": ["Movies"],
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        }
+      }
+    },
+    "/api/v1/movies/popular/": {
+      "get": {
+        "operationId": "v1_movies_popular_retrieve",
+        "summary": "List popular movies from TMDB",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "TMDB page number"
+          }
+        ],
+        "tags": ["Movies"],
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TMDBPaginatedResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "502": {
+            "description": "TMDB fetch failed"
+          }
+        }
+      }
+    },
+    "/api/v1/movies/search/": {
+      "get": {
+        "operationId": "v1_movies_search_retrieve",
+        "description": "Returns popular movies when `q` is omitted. Pass `page` to fetch a specific page. Results are fetched in the background on cache miss — retry the same request while `status` is `pending`.",
+        "summary": "Browse or search movies on TMDB",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page number (default: 1)."
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional search query. Omit to list popular movies."
+          }
+        ],
+        "tags": ["Movies"],
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TMDBBrowseResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
     "/api/v1/users/me/": {
       "get": {
         "operationId": "v1_users_me_retrieve",
@@ -205,6 +924,166 @@
   },
   "components": {
     "schemas": {
+      "ActionEnum": {
+        "enum": ["accept", "decline"],
+        "type": "string",
+        "description": "* `accept` - Accept\n* `decline` - Decline"
+      },
+      "FeedActivity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FriendUser"
+              }
+            ],
+            "readOnly": true
+          },
+          "movie": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Movie"
+              }
+            ],
+            "readOnly": true
+          },
+          "watched_date": {
+            "type": "string",
+            "format": "date",
+            "readOnly": true
+          },
+          "rating": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,2}(?:\\.\\d{0,1})?$",
+            "readOnly": true,
+            "nullable": true
+          },
+          "review_text": {
+            "type": "string",
+            "readOnly": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "created_at",
+          "id",
+          "movie",
+          "rating",
+          "review_text",
+          "updated_at",
+          "user",
+          "watched_date"
+        ]
+      },
+      "FriendRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "sender": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FriendUser"
+              }
+            ],
+            "readOnly": true
+          },
+          "receiver": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FriendUser"
+              }
+            ],
+            "readOnly": true
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FriendStatusEnum"
+              }
+            ],
+            "readOnly": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "created_at",
+          "id",
+          "receiver",
+          "sender",
+          "status",
+          "updated_at"
+        ]
+      },
+      "FriendRequestCreateRequest": {
+        "type": "object",
+        "properties": {
+          "receiver_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["receiver_id"]
+      },
+      "FriendStatusEnum": {
+        "enum": ["pending", "accepted", "declined"],
+        "type": "string",
+        "description": "* `pending` - Pending\n* `accepted` - Accepted\n* `declined` - Declined"
+      },
+      "FriendUser": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "readOnly": true
+          },
+          "bio": {
+            "type": "string",
+            "readOnly": true
+          },
+          "profile_image": {
+            "type": "string",
+            "format": "uri",
+            "readOnly": true,
+            "nullable": true
+          }
+        },
+        "required": ["bio", "email", "id", "profile_image"]
+      },
       "LoginRequest": {
         "type": "object",
         "properties": {
@@ -220,6 +1099,315 @@
           }
         },
         "required": ["email", "password"]
+      },
+      "Movie": {
+        "type": "object",
+        "properties": {
+          "tmdb_id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "overview": {
+            "type": "string"
+          },
+          "poster_path": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "poster_url": {
+            "type": "string",
+            "nullable": true,
+            "readOnly": true
+          },
+          "release_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "vote_average": {
+            "type": "number",
+            "format": "double"
+          },
+          "runtime": {
+            "type": "integer",
+            "maximum": 9223372036854775807,
+            "minimum": 0,
+            "format": "int64",
+            "nullable": true
+          },
+          "genres": {}
+        },
+        "required": ["poster_url", "title", "tmdb_id"]
+      },
+      "MovieLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "movie": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Movie"
+              }
+            ],
+            "readOnly": true
+          },
+          "watched_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "rating": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,2}(?:\\.\\d{0,1})?$",
+            "nullable": true
+          },
+          "review_text": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": ["created_at", "id", "movie", "updated_at", "watched_date"]
+      },
+      "MovieLogCreateRequest": {
+        "type": "object",
+        "properties": {
+          "tmdb_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "watched_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "rating": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,2}(?:\\.\\d{0,1})?$",
+            "nullable": true
+          },
+          "review_text": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": ["tmdb_id", "watched_date"]
+      },
+      "MovieLogRequest": {
+        "type": "object",
+        "properties": {
+          "tmdb_id": {
+            "type": "integer",
+            "writeOnly": true
+          },
+          "watched_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "rating": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,2}(?:\\.\\d{0,1})?$",
+            "nullable": true
+          },
+          "review_text": {
+            "type": "string"
+          }
+        },
+        "required": ["watched_date"]
+      },
+      "MovieRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "overview": {
+            "type": "string"
+          },
+          "poster_path": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "release_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "vote_average": {
+            "type": "number",
+            "format": "double"
+          },
+          "runtime": {
+            "type": "integer",
+            "maximum": 9223372036854775807,
+            "minimum": 0,
+            "format": "int64",
+            "nullable": true
+          },
+          "genres": {}
+        },
+        "required": ["title"]
+      },
+      "PaginatedFeedActivityList": {
+        "type": "object",
+        "required": ["count", "results"],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "example": 123
+          },
+          "next": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri",
+            "example": "http://api.example.org/accounts/?page=4"
+          },
+          "previous": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri",
+            "example": "http://api.example.org/accounts/?page=2"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedActivity"
+            }
+          }
+        }
+      },
+      "PaginatedFriendRequestList": {
+        "type": "object",
+        "required": ["count", "results"],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "example": 123
+          },
+          "next": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri",
+            "example": "http://api.example.org/accounts/?page=4"
+          },
+          "previous": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri",
+            "example": "http://api.example.org/accounts/?page=2"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FriendRequest"
+            }
+          }
+        }
+      },
+      "PaginatedFriendUserList": {
+        "type": "object",
+        "required": ["count", "results"],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "example": 123
+          },
+          "next": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri",
+            "example": "http://api.example.org/accounts/?page=4"
+          },
+          "previous": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri",
+            "example": "http://api.example.org/accounts/?page=2"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FriendUser"
+            }
+          }
+        }
+      },
+      "PaginatedMovieLogList": {
+        "type": "object",
+        "required": ["count", "results"],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "example": 123
+          },
+          "next": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri",
+            "example": "http://api.example.org/accounts/?page=4"
+          },
+          "previous": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri",
+            "example": "http://api.example.org/accounts/?page=2"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MovieLog"
+            }
+          }
+        }
+      },
+      "PatchedFriendRequestActionRequest": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ActionEnum"
+          }
+        }
+      },
+      "PatchedMovieLogRequest": {
+        "type": "object",
+        "properties": {
+          "tmdb_id": {
+            "type": "integer",
+            "writeOnly": true
+          },
+          "watched_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "rating": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,2}(?:\\.\\d{0,1})?$",
+            "nullable": true
+          },
+          "review_text": {
+            "type": "string"
+          }
+        }
       },
       "PatchedUserProfileRequest": {
         "type": "object",
@@ -255,6 +1443,147 @@
           }
         },
         "required": ["confirm_password", "email", "password"]
+      },
+      "TMDBBrowseResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/TMDBBrowseResponseStatusEnum"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "total_pages": {
+            "type": "integer"
+          },
+          "total_results": {
+            "type": "integer"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TMDBMovie"
+            }
+          }
+        },
+        "required": [
+          "page",
+          "results",
+          "status",
+          "total_pages",
+          "total_results"
+        ]
+      },
+      "TMDBBrowseResponseStatusEnum": {
+        "enum": ["ready", "pending"],
+        "type": "string",
+        "description": "* `ready` - ready\n* `pending` - pending"
+      },
+      "TMDBMovie": {
+        "type": "object",
+        "properties": {
+          "tmdb_id": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "overview": {
+            "type": "string"
+          },
+          "poster_path": {
+            "type": "string",
+            "nullable": true
+          },
+          "poster_url": {
+            "type": "string",
+            "nullable": true,
+            "readOnly": true
+          },
+          "release_date": {
+            "type": "string"
+          },
+          "vote_average": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": [
+          "overview",
+          "poster_url",
+          "title",
+          "tmdb_id",
+          "vote_average"
+        ]
+      },
+      "TMDBMovieDetail": {
+        "type": "object",
+        "properties": {
+          "tmdb_id": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "overview": {
+            "type": "string"
+          },
+          "poster_path": {
+            "type": "string",
+            "nullable": true
+          },
+          "poster_url": {
+            "type": "string",
+            "nullable": true,
+            "readOnly": true
+          },
+          "release_date": {
+            "type": "string"
+          },
+          "vote_average": {
+            "type": "number",
+            "format": "double"
+          },
+          "runtime": {
+            "type": "integer",
+            "nullable": true
+          },
+          "genres": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          }
+        },
+        "required": [
+          "overview",
+          "poster_url",
+          "title",
+          "tmdb_id",
+          "vote_average"
+        ]
+      },
+      "TMDBPaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "total_pages": {
+            "type": "integer"
+          },
+          "total_results": {
+            "type": "integer"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TMDBMovie"
+            }
+          }
+        },
+        "required": ["page", "results", "total_pages", "total_results"]
       },
       "UserProfile": {
         "type": "object",
