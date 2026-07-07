@@ -29,6 +29,13 @@ class TMDBMovieDetailSerializer(TMDBMovieSerializer):
     genres = serializers.ListField(child=serializers.DictField(), required=False)
 
 
+class TMDBCursorPaginatedResponseSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=("ready", "pending"))
+    results = TMDBMovieSerializer(many=True)
+    next_cursor = serializers.CharField(allow_null=True)
+    previous_cursor = serializers.CharField(allow_null=True)
+
+
 class TMDBPaginatedResponseSerializer(serializers.Serializer):
     page = serializers.IntegerField()
     total_pages = serializers.IntegerField()
@@ -108,8 +115,8 @@ class MovieLogCreateSerializer(serializers.Serializer):
 
 
 class MovieSearchQuerySerializer(serializers.Serializer):
-    q = serializers.CharField(min_length=1, max_length=200)
-    page = serializers.IntegerField(min_value=1, required=False, default=1)
+    q = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
+    cursor = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class PageQuerySerializer(serializers.Serializer):

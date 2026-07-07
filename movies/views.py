@@ -13,6 +13,7 @@ from .serializers import (
     MovieLogSerializer,
     MovieSearchQuerySerializer,
     PageQuerySerializer,
+    TMDBCursorPaginatedResponseSerializer,
     TMDBMovieDetailSerializer,
     TMDBPaginatedResponseSerializer,
 )
@@ -45,26 +46,40 @@ class MovieSearchView(APIView):
 
     @extend_schema(
         tags=["Movies"],
-        summary="Search movies on TMDB",
+        summary="Browse or search movies on TMDB",
+        description=(
+            "Returns popular movies when `q` is omitted. "
+            "Results are fetched in the background on cache miss — "
+            "retry with the same cursor while `status` is `pending`."
+        ),
         parameters=[
-            OpenApiParameter(name="q", type=str, required=True, description="Search query"),
-            OpenApiParameter(name="page", type=int, description="TMDB page number"),
+            OpenApiParameter(
+                name="q",
+                type=str,
+                required=False,
+                description="Optional search query. Omit to list popular movies.",
+            ),
+            OpenApiParameter(
+                name="cursor",
+                type=str,
+                required=False,
+                description="Cursor for the next or previous page of results.",
+            ),
         ],
         responses={
-            200: TMDBPaginatedResponseSerializer,
+            200: TMDBCursorPaginatedResponseSerializer,
             400: OpenApiResponse(description="Validation error"),
-            502: OpenApiResponse(description="TMDB fetch failed"),
         },
     )
     def get(self, request: Request) -> Response:
         query = MovieSearchQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
         validated = query.validated_data
-        data = services.search_movies(
-            query=validated["q"],
-            page=validated["page"],
+        data = services.browse_movies(
+            query=validated.get("q") or None,
+            cursor=validated.get("cursor") or None,
         )
-        serializer = TMDBPaginatedResponseSerializer(data)
+        serializer = TMDBCursorPaginatedResponseSerializer(data)
         return Response(serializer.data)
 
 

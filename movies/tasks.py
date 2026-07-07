@@ -25,6 +25,17 @@ def _safe_cache_set(key: str, value, timeout: int) -> None:
         pass
 
 
+def _safe_cache_delete(key: str) -> None:
+    try:
+        cache.delete(key)
+    except Exception:
+        pass
+
+
+def _clear_pending(cache_key: str) -> None:
+    _safe_cache_delete(f"{cache_key}{constants.CACHE_KEY_PENDING_SUFFIX}")
+
+
 def _upsert_movie(data: dict) -> Movie:
     release_date = data.get("release_date") or None
     if release_date == "":
@@ -47,16 +58,24 @@ def _upsert_movie(data: dict) -> Movie:
 
 @shared_task(name="movies.fetch_popular_movies")
 def fetch_popular_movies(page: int = 1) -> dict:
-    data = tmdb_client.get_popular_movies(page=page)
-    _safe_cache_set(_cache_key_popular(page), data, settings.TMDB_CACHE_TTL)
-    return data
+    cache_key = _cache_key_popular(page)
+    try:
+        data = tmdb_client.get_popular_movies(page=page)
+        _safe_cache_set(cache_key, data, settings.TMDB_CACHE_TTL)
+        return data
+    finally:
+        _clear_pending(cache_key)
 
 
 @shared_task(name="movies.search_movies")
 def search_movies_task(query: str, page: int = 1) -> dict:
-    data = tmdb_client.search_movies(query=query, page=page)
-    _safe_cache_set(_cache_key_search(query, page), data, settings.TMDB_CACHE_TTL)
-    return data
+    cache_key = _cache_key_search(query, page)
+    try:
+        data = tmdb_client.search_movies(query=query, page=page)
+        _safe_cache_set(cache_key, data, settings.TMDB_CACHE_TTL)
+        return data
+    finally:
+        _clear_pending(cache_key)
 
 
 @shared_task(name="movies.fetch_movie_detail")

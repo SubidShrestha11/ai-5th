@@ -1,16 +1,10 @@
 from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
+from rest_framework.exceptions import ValidationError
 
 from . import constants, tasks
-from .models import Movie, MovieLog
-
-
-from django.conf import settings
-from django.core.cache import cache
-from django.db import transaction
-
-from . import constants, tasks
+from .cursor import decode_cursor, encode_cursor
 from .models import Movie, MovieLog
 
 
@@ -24,6 +18,17 @@ def _cache_key_search(query: str, page: int) -> str:
 
 def _cache_key_movie(tmdb_id: int) -> str:
     return constants.CACHE_KEY_MOVIE.format(tmdb_id=tmdb_id)
+
+
+def _pending_key(cache_key: str) -> str:
+    return f"{cache_key}{constants.CACHE_KEY_PENDING_SUFFIX}"
+
+
+def _normalize_query(query: str | None) -> str | None:
+    if query is None:
+        return None
+    normalized = query.strip()
+    return normalized or None
 
 
 _redis_available_cache: bool | None = None
@@ -45,6 +50,47 @@ def _redis_available() -> bool:
     return _redis_available_cache
 
 
+def _safe_cache_get(key: str):
+    try:
+        return cache.get(key)
+    except Exception:
+        return None
+
+
+def _safe_cache_set(key: str, value, timeout: int) -> None:
+    try:
+        cache.set(key, value, timeout=timeout)
+    except Exception:
+        pass
+
+
+def _safe_cache_delete(key: str) -> None:
+    try:
+        cache.delete(key)
+    except Exception:
+        pass
+
+
+def _dispatch_background_task(task, cache_key: str, *args) -> None:
+    pending_key = _pending_key(cache_key)
+    if _safe_cache_get(pending_key):
+        return
+
+    _safe_cache_set(pending_key, True, constants.PENDING_TTL)
+
+    if _redis_available():
+        try:
+            task.delay(*args)
+            return
+        except Exception:
+            pass
+
+    try:
+        task.run(*args)
+    finally:
+        _safe_cache_delete(pending_key)
+
+
 def _run_celery_task(task, *args, timeout: int = 15):
     if not _redis_available():
         return task.run(*args)
@@ -55,11 +101,62 @@ def _run_celery_task(task, *args, timeout: int = 15):
         return task.run(*args)
 
 
-def _safe_cache_get(key: str):
+def _resolve_browse_page(query: str | None, cursor: str | None) -> tuple[int, str | None]:
+    normalized_query = _normalize_query(query)
+    if cursor:
+        page, cursor_query = decode_cursor(cursor)
+        if normalized_query and cursor_query and normalized_query.lower() != cursor_query.lower():
+            raise ValueError("cursor_query_mismatch")
+        return page, cursor_query or normalized_query
+    return 1, normalized_query
+
+
+def _build_cursor_response(tmdb_data: dict, query: str | None, page: int) -> dict:
+    total_pages = tmdb_data.get("total_pages", 1)
+    cursor_query = query.lower().strip() if query else None
+    return {
+        "status": "ready",
+        "results": tmdb_data.get("results", []),
+        "next_cursor": encode_cursor(page + 1, cursor_query) if page < total_pages else None,
+        "previous_cursor": encode_cursor(page - 1, cursor_query) if page > 1 else None,
+    }
+
+
+def _build_pending_response(query: str | None, page: int) -> dict:
+    cursor_query = query.lower().strip() if query else None
+    return {
+        "status": "pending",
+        "results": [],
+        "next_cursor": None,
+        "previous_cursor": encode_cursor(page, cursor_query) if page > 1 else None,
+    }
+
+
+def browse_movies(query: str | None = None, cursor: str | None = None) -> dict:
     try:
-        return cache.get(key)
-    except Exception:
-        return None
+        page, resolved_query = _resolve_browse_page(query, cursor)
+    except ValueError as exc:
+        raise ValidationError({"cursor": "Cursor does not match the search query."}) from exc
+
+    if resolved_query:
+        cache_key = _cache_key_search(resolved_query, page)
+        fetch_task = tasks.search_movies_task
+        fetch_args = (resolved_query, page)
+    else:
+        cache_key = _cache_key_popular(page)
+        fetch_task = tasks.fetch_popular_movies
+        fetch_args = (page,)
+
+    cached = _safe_cache_get(cache_key)
+    if cached:
+        return _build_cursor_response(cached, resolved_query, page)
+
+    if not _redis_available():
+        data = fetch_task.run(*fetch_args)
+        return _build_cursor_response(data, resolved_query, page)
+
+    _dispatch_background_task(fetch_task, cache_key, *fetch_args)
+    return _build_pending_response(resolved_query, page)
 
 
 def get_popular_movies(page: int = 1) -> dict:
