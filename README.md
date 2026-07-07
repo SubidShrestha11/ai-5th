@@ -54,12 +54,19 @@ Movies are sourced from a public API (TMDB or similar), so there's no need to ma
   - `GET /api/v1/users/me/` — get own profile
   - `PATCH /api/v1/users/me/` — update bio / profile image
 - [x] Migrations applied
+- [x] `friends` app — friend requests, friend list, removal:
+  - `POST /api/v1/friends/request/` — send a friend request
+  - `GET /api/v1/friends/requests/` — list pending requests (`?direction=incoming|outgoing`)
+  - `PATCH /api/v1/friends/request/<id>/` — accept or decline a request
+  - `GET /api/v1/friends/` — list all friends
+  - `DELETE /api/v1/friends/<id>/` — remove a friend
+- [x] Tests for `friends` app
 
 ### In Progress
 - [ ] `movies` app — TMDB integration, movie logs, reviews
 
 ### Pending
-- [ ] `friends` app — friend requests, friend list, removal
+- [ ] `friends` app — view a friend's movie logs (`GET /api/v1/friends/<id>/logs/`)
 - [ ] `feed` app — friend activity feed
 - [ ] `suggestions` app — algorithmic movie recommendations
 - [ ] `core` app — shared exception handler, pagination
@@ -200,6 +207,7 @@ All endpoints are versioned under `/api/v1/`.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `POST` | `/api/v1/friends/request/` | Send a friend request |
+| `GET` | `/api/v1/friends/requests/` | List pending requests (`?direction=incoming\|outgoing`) |
 | `PATCH` | `/api/v1/friends/request/<id>/` | Accept or decline a request |
 | `GET` | `/api/v1/friends/` | List all friends |
 | `DELETE` | `/api/v1/friends/<id>/` | Remove a friend |
