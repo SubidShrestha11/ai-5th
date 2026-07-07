@@ -1,10 +1,8 @@
 from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
-from rest_framework.exceptions import ValidationError
 
 from . import constants, tasks
-from .cursor import decode_cursor, encode_cursor
 from .models import Movie, MovieLog
 
 
@@ -101,42 +99,22 @@ def _run_celery_task(task, *args, timeout: int = 15):
         return task.run(*args)
 
 
-def _resolve_browse_page(query: str | None, cursor: str | None) -> tuple[int, str | None]:
-    normalized_query = _normalize_query(query)
-    if cursor:
-        page, cursor_query = decode_cursor(cursor)
-        if normalized_query and cursor_query and normalized_query.lower() != cursor_query.lower():
-            raise ValueError("cursor_query_mismatch")
-        return page, cursor_query or normalized_query
-    return 1, normalized_query
-
-
-def _build_cursor_response(tmdb_data: dict, query: str | None, page: int) -> dict:
-    total_pages = tmdb_data.get("total_pages", 1)
-    cursor_query = query.lower().strip() if query else None
+def _build_page_response(tmdb_data: dict, page: int, *, status: str = "ready") -> dict:
     return {
-        "status": "ready",
+        "status": status,
+        "page": tmdb_data.get("page", page),
+        "total_pages": tmdb_data.get("total_pages", 0),
+        "total_results": tmdb_data.get("total_results", 0),
         "results": tmdb_data.get("results", []),
-        "next_cursor": encode_cursor(page + 1, cursor_query) if page < total_pages else None,
-        "previous_cursor": encode_cursor(page - 1, cursor_query) if page > 1 else None,
     }
 
 
-def _build_pending_response(query: str | None, page: int) -> dict:
-    cursor_query = query.lower().strip() if query else None
-    return {
-        "status": "pending",
-        "results": [],
-        "next_cursor": None,
-        "previous_cursor": encode_cursor(page, cursor_query) if page > 1 else None,
-    }
+def _build_pending_response(page: int) -> dict:
+    return _build_page_response({}, page, status="pending")
 
 
-def browse_movies(query: str | None = None, cursor: str | None = None) -> dict:
-    try:
-        page, resolved_query = _resolve_browse_page(query, cursor)
-    except ValueError as exc:
-        raise ValidationError({"cursor": "Cursor does not match the search query."}) from exc
+def browse_movies(query: str | None = None, page: int = 1) -> dict:
+    resolved_query = _normalize_query(query)
 
     if resolved_query:
         cache_key = _cache_key_search(resolved_query, page)
@@ -149,14 +127,14 @@ def browse_movies(query: str | None = None, cursor: str | None = None) -> dict:
 
     cached = _safe_cache_get(cache_key)
     if cached:
-        return _build_cursor_response(cached, resolved_query, page)
+        return _build_page_response(cached, page)
 
     if not _redis_available():
         data = fetch_task.run(*fetch_args)
-        return _build_cursor_response(data, resolved_query, page)
+        return _build_page_response(data, page)
 
     _dispatch_background_task(fetch_task, cache_key, *fetch_args)
-    return _build_pending_response(resolved_query, page)
+    return _build_pending_response(page)
 
 
 def get_popular_movies(page: int = 1) -> dict:

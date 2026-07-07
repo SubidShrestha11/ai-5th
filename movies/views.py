@@ -13,7 +13,7 @@ from .serializers import (
     MovieLogSerializer,
     MovieSearchQuerySerializer,
     PageQuerySerializer,
-    TMDBCursorPaginatedResponseSerializer,
+    TMDBBrowseResponseSerializer,
     TMDBMovieDetailSerializer,
     TMDBPaginatedResponseSerializer,
 )
@@ -49,8 +49,9 @@ class MovieSearchView(APIView):
         summary="Browse or search movies on TMDB",
         description=(
             "Returns popular movies when `q` is omitted. "
+            "Pass `page` to fetch a specific page. "
             "Results are fetched in the background on cache miss — "
-            "retry with the same cursor while `status` is `pending`."
+            "retry the same request while `status` is `pending`."
         ),
         parameters=[
             OpenApiParameter(
@@ -60,14 +61,14 @@ class MovieSearchView(APIView):
                 description="Optional search query. Omit to list popular movies.",
             ),
             OpenApiParameter(
-                name="cursor",
-                type=str,
+                name="page",
+                type=int,
                 required=False,
-                description="Cursor for the next or previous page of results.",
+                description="Page number (default: 1).",
             ),
         ],
         responses={
-            200: TMDBCursorPaginatedResponseSerializer,
+            200: TMDBBrowseResponseSerializer,
             400: OpenApiResponse(description="Validation error"),
         },
     )
@@ -77,9 +78,9 @@ class MovieSearchView(APIView):
         validated = query.validated_data
         data = services.browse_movies(
             query=validated.get("q") or None,
-            cursor=validated.get("cursor") or None,
+            page=validated["page"],
         )
-        serializer = TMDBCursorPaginatedResponseSerializer(data)
+        serializer = TMDBBrowseResponseSerializer(data)
         return Response(serializer.data)
 
 
