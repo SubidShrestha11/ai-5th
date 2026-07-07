@@ -55,5 +55,8 @@ Thumbs.db
 celerybeat-schedule
 celerybeat.pid
 
+# Local portable Redis (dev only, not committed)
+.redis/
+
 .cursorrules
 .cursorignore
