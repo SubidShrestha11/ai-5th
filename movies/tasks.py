@@ -56,12 +56,54 @@ def _upsert_movie(data: dict) -> Movie:
     return movie
 
 
+def _upsert_movies_from_results(results: list[dict]) -> None:
+    movies = []
+    for data in results:
+        if not data.get("id"):
+            continue
+
+        release_date = data.get("release_date") or None
+        if release_date == "":
+            release_date = None
+
+        movies.append(
+            Movie(
+                tmdb_id=data["id"],
+                title=data.get("title") or data.get("name") or "",
+                overview=data.get("overview") or "",
+                poster_path=data.get("poster_path") or "",
+                release_date=release_date,
+                vote_average=data.get("vote_average") or 0.0,
+                runtime=data.get("runtime"),
+                genres=data.get("genres") or [],
+            )
+        )
+
+    if not movies:
+        return
+
+    Movie.objects.bulk_create(
+        movies,
+        update_conflicts=True,
+        unique_fields=["tmdb_id"],
+        update_fields=(
+            "title",
+            "overview",
+            "poster_path",
+            "release_date",
+            "vote_average",
+            "updated_at",
+        ),
+    )
+
+
 @shared_task(name="movies.fetch_popular_movies")
 def fetch_popular_movies(page: int = 1) -> dict:
     cache_key = _cache_key_popular(page)
     try:
         data = tmdb_client.get_popular_movies(page=page)
         _safe_cache_set(cache_key, data, settings.TMDB_CACHE_TTL)
+        _upsert_movies_from_results(data.get("results", []))
         return data
     finally:
         _clear_pending(cache_key)
@@ -73,6 +115,7 @@ def search_movies_task(query: str, page: int = 1) -> dict:
     try:
         data = tmdb_client.search_movies(query=query, page=page)
         _safe_cache_set(cache_key, data, settings.TMDB_CACHE_TTL)
+        _upsert_movies_from_results(data.get("results", []))
         return data
     finally:
         _clear_pending(cache_key)
