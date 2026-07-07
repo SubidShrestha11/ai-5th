@@ -33,11 +33,11 @@ export interface RefreshTokenResponse {
 export interface ApiUser {
   id: string | number;
   username: string;
-  display_name: string;
+  display_name?: string | null;
   email: string;
-  bio: string | null;
-  profile_image: string | null;
-  date_joined: string;
+  bio?: string | null;
+  profile_image?: string | null;
+  date_joined?: string;
   movies_watched?: number;
 }
 

@@ -28,31 +28,33 @@ const gradients = [
 ];
 
 function pickGradient(name: string): string {
-  const idx = name.charCodeAt(0) % gradients.length;
+  const safeName = name.trim() || '?';
+  const idx = safeName.charCodeAt(0) % gradients.length;
   return gradients[idx];
 }
 
 export function Avatar({ src, name, size = 'md', className = '', online }: AvatarProps) {
   const { container, text, indicator } = sizeMap[size];
-  const gradient = pickGradient(name);
+  const safeName = name?.trim() || '?';
+  const gradient = pickGradient(safeName);
 
   return (
     <div className={`relative shrink-0 ${className}`}>
       <div
         className={`${container} rounded-full overflow-hidden ring-1 ring-white/10`}
-        aria-label={name}
+        aria-label={safeName}
       >
         {src ? (
           <img
             src={src}
-            alt={name}
+            alt={safeName}
             className="w-full h-full object-cover"
           />
         ) : (
           <div
             className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${gradient} font-semibold text-white select-none ${text}`}
           >
-            {getInitials(name)}
+            {getInitials(safeName)}
           </div>
         )}
       </div>

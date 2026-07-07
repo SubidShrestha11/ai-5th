@@ -21,7 +21,14 @@ export const useAuthStore = create<AuthState>()(
       isInitialized: false,
 
       setSession: user => {
-        set({ user, isAuthenticated: true, isInitialized: true });
+        set({
+          user: {
+            ...user,
+            displayName: user.displayName?.trim() || user.username || 'User',
+          },
+          isAuthenticated: true,
+          isInitialized: true,
+        });
       },
 
       clearSession: () => {
