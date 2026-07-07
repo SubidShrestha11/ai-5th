@@ -59,9 +59,11 @@ export function generateId(): string {
 }
 
 export function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map(n => n[0])
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+
+  return parts
+    .map(part => part[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);

@@ -18,11 +18,11 @@ export function mapApiUser(user: ApiUser): User {
   return {
     id: toId(user.id),
     username: user.username,
-    displayName: user.display_name,
+    displayName: user.display_name?.trim() || user.username || 'User',
     email: user.email,
-    bio: user.bio,
-    avatar: user.profile_image,
-    createdAt: user.date_joined,
+    bio: user.bio ?? null,
+    avatar: user.profile_image ?? null,
+    createdAt: user.date_joined ?? new Date(0).toISOString(),
     moviesWatched: user.movies_watched ?? 0,
   };
 }
@@ -31,8 +31,8 @@ export function mapApiFriend(friend: ApiFriend): Friend {
   return {
     id: toId(friend.id),
     username: friend.username,
-    displayName: friend.display_name,
-    avatar: friend.profile_image,
+    displayName: friend.display_name?.trim() || friend.username || 'User',
+    avatar: friend.profile_image ?? null,
     moviesWatched: friend.movies_watched ?? 0,
     recentActivity: friend.recent_activity
       ? mapApiMovieLog(friend.recent_activity)
@@ -45,8 +45,9 @@ export function mapApiFriendRequest(request: ApiFriendRequest): FriendRequest {
     id: toId(request.id),
     fromUserId: toId(request.from_user.id),
     fromUsername: request.from_user.username,
-    fromDisplayName: request.from_user.display_name,
-    fromAvatar: request.from_user.profile_image,
+    fromDisplayName:
+      request.from_user.display_name?.trim() || request.from_user.username || 'User',
+    fromAvatar: request.from_user.profile_image ?? null,
     toUserId: toId(request.to_user.id),
     status: request.status === 'declined' ? 'rejected' : request.status,
     createdAt: request.created_at,
