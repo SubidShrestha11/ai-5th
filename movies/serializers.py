@@ -34,6 +34,8 @@ class TMDBBrowseResponseSerializer(serializers.Serializer):
     page = serializers.IntegerField()
     total_pages = serializers.IntegerField()
     total_results = serializers.IntegerField()
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
     results = TMDBMovieSerializer(many=True)
 
 
@@ -41,6 +43,8 @@ class TMDBPaginatedResponseSerializer(serializers.Serializer):
     page = serializers.IntegerField()
     total_pages = serializers.IntegerField()
     total_results = serializers.IntegerField()
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
     results = TMDBMovieSerializer(many=True)
 
 

@@ -100,10 +100,12 @@ def _run_celery_task(task, *args, timeout: int = 15):
 
 
 def _build_page_response(tmdb_data: dict, page: int, *, status: str = "ready") -> dict:
+    page_num = tmdb_data.get("page", page)
+    total_pages = tmdb_data.get("total_pages", 0)
     return {
         "status": status,
-        "page": tmdb_data.get("page", page),
-        "total_pages": tmdb_data.get("total_pages", 0),
+        "page": page_num,
+        "total_pages": total_pages,
         "total_results": tmdb_data.get("total_results", 0),
         "results": tmdb_data.get("results", []),
     }
