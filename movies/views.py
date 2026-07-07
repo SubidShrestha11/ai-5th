@@ -6,6 +6,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.pagination import build_page_links
+
 from . import services
 from .models import MovieLog
 from .serializers import (
@@ -36,7 +38,9 @@ class PopularMoviesView(APIView):
     def get(self, request: Request) -> Response:
         query = PageQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
-        data = services.get_popular_movies(page=query.validated_data["page"])
+        page = query.validated_data["page"]
+        data = services.get_popular_movies(page=page)
+        data.update(build_page_links(request, page, data["total_pages"]))
         serializer = TMDBPaginatedResponseSerializer(data)
         return Response(serializer.data)
 
@@ -76,10 +80,14 @@ class MovieSearchView(APIView):
         query = MovieSearchQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
         validated = query.validated_data
+        page = validated["page"]
+        search_query = validated.get("q") or None
         data = services.browse_movies(
-            query=validated.get("q") or None,
-            page=validated["page"],
+            query=search_query,
+            page=page,
         )
+        extra_query = {"q": search_query} if search_query else None
+        data.update(build_page_links(request, page, data["total_pages"], extra_query=extra_query))
         serializer = TMDBBrowseResponseSerializer(data)
         return Response(serializer.data)
 
