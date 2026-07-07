@@ -1,0 +1,4 @@
+DEFAULT_PAGE_SIZE = 20
+
+SOURCE_FRIENDS = "friends"
+SOURCE_POPULAR = "popular"
