@@ -60,14 +60,16 @@ Movies are sourced from a public API (TMDB or similar), so there's no need to ma
   - `PATCH /api/v1/friends/request/<id>/` — accept or decline a request
   - `GET /api/v1/friends/` — list all friends
   - `DELETE /api/v1/friends/<id>/` — remove a friend
+  - `GET /api/v1/friends/<id>/logs/` — view a friend's movie logs
 - [x] Tests for `friends` app
+- [x] `feed` app — friend activity feed:
+  - `GET /api/v1/feed/` — chronological feed of friends' movie logs
+- [x] Tests for `feed` app
 
 ### In Progress
 - [ ] `movies` app — TMDB integration, movie logs, reviews
 
 ### Pending
-- [ ] `friends` app — view a friend's movie logs (`GET /api/v1/friends/<id>/logs/`)
-- [ ] `feed` app — friend activity feed
 - [ ] `suggestions` app — algorithmic movie recommendations
 - [ ] `core` app — shared exception handler, pagination
 - [ ] Tests for `users` app

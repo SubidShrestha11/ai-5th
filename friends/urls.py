@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     FriendListView,
+    FriendMovieLogListView,
     FriendRemoveView,
     FriendRequestCreateView,
     FriendRequestListView,
@@ -17,5 +18,10 @@ urlpatterns = [
     ),
     path("friends/requests/", FriendRequestListView.as_view(), name="friend-request-list"),
     path("friends/", FriendListView.as_view(), name="friend-list"),
+    path(
+        "friends/<uuid:user_id>/logs/",
+        FriendMovieLogListView.as_view(),
+        name="friend-movie-logs",
+    ),
     path("friends/<uuid:user_id>/", FriendRemoveView.as_view(), name="friend-remove"),
 ]

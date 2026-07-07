@@ -50,10 +50,13 @@ def list_friends(user: User):
     return FriendRequest.objects.friends_of(user)
 
 
-def get_friend_users(user: User):
+def get_friend_user_ids(user: User) -> list:
     friendships = list_friends(user)
-    friend_ids = [friendship.other_user(user).id for friendship in friendships]
-    return User.objects.filter(id__in=friend_ids).order_by("email")
+    return [friendship.other_user(user).id for friendship in friendships]
+
+
+def get_friend_users(user: User):
+    return User.objects.filter(id__in=get_friend_user_ids(user)).order_by("email")
 
 
 def list_pending_requests(user: User, direction: str | None = None):
@@ -70,3 +73,12 @@ def remove_friend(user: User, friend_user_id) -> None:
 
 def are_friends(user_a: User, user_b: User) -> bool:
     return FriendRequest.objects.accepted_between(user_a, user_b).exists()
+
+
+def get_friend_movie_logs(viewer: User, friend_user_id):
+    friend = get_object_or_404(User, id=friend_user_id, is_active=True)
+    if not are_friends(viewer, friend):
+        raise PermissionDenied("You can only view movie logs of your friends.")
+    from movies import services as movie_services
+
+    return movie_services.get_user_movie_logs(friend.id)

@@ -6,6 +6,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from movies.serializers import MovieLogSerializer
+
 from . import services
 from .serializers import (
     FriendRequestActionSerializer,
@@ -128,3 +130,26 @@ class FriendRemoveView(APIView):
     def delete(self, request: Request, user_id) -> Response:
         services.remove_friend(user=request.user, friend_user_id=user_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class FriendMovieLogListView(ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = MovieLogSerializer
+
+    @extend_schema(
+        tags=["Friends"],
+        summary="View a friend's movie logs",
+        responses={
+            200: MovieLogSerializer(many=True),
+            403: OpenApiResponse(description="Not friends with this user"),
+            404: OpenApiResponse(description="User not found"),
+        },
+    )
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return services.get_friend_movie_logs(
+            viewer=self.request.user,
+            friend_user_id=self.kwargs["user_id"],
+        )
