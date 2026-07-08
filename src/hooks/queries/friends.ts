@@ -23,6 +23,14 @@ export function useFriendRequests(
   });
 }
 
+export function useSearchFriends(query: string, enabled = query.trim().length >= 2) {
+  return useQuery({
+    queryKey: queryKeys.friends.search(query),
+    queryFn: () => friendsService.searchFriends(query),
+    enabled,
+  });
+}
+
 export function useSendFriendRequest() {
   const queryClient = useQueryClient();
 

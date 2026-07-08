@@ -11,6 +11,7 @@ export const queryKeys = {
   friends: {
     all: ['friends'] as const,
     list: () => [...queryKeys.friends.all, 'list'] as const,
+    search: (query: string) => [...queryKeys.friends.all, 'search', query] as const,
     logs: (userId: string) => [...queryKeys.friends.all, 'logs', userId] as const,
     requests: (direction: 'incoming' | 'outgoing' = 'incoming') =>
       [...queryKeys.friends.all, 'requests', direction] as const,
@@ -28,6 +29,5 @@ export const queryKeys = {
   users: {
     all: ['users'] as const,
     me: () => [...queryKeys.users.all, 'me'] as const,
-    search: (query: string) => [...queryKeys.users.all, 'search', query] as const,
   },
 } as const;

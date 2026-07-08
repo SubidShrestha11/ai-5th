@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 import type { LoginRequest, RegisterRequest } from '@/api/types/auth';
 
 export function useLogin() {
+  const queryClient = useQueryClient();
   const setSession = useAuthStore(state => state.setSession);
   const clearSession = useAuthStore(state => state.clearSession);
 
@@ -17,6 +18,8 @@ export function useLogin() {
     },
     onSuccess: user => {
       setSession(user);
+      queryClient.invalidateQueries({ queryKey: queryKeys.movies.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.feed.all });
     },
     onError: () => {
       clearSession();
@@ -28,6 +31,7 @@ export function useLogin() {
 }
 
 export function useRegister() {
+  const queryClient = useQueryClient();
   const setSession = useAuthStore(state => state.setSession);
   const clearSession = useAuthStore(state => state.clearSession);
 
@@ -38,6 +42,8 @@ export function useRegister() {
     },
     onSuccess: user => {
       setSession(user);
+      queryClient.invalidateQueries({ queryKey: queryKeys.movies.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.feed.all });
     },
     onError: () => {
       clearSession();

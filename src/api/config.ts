@@ -13,6 +13,7 @@ export const API_PATHS = {
   },
   friends: {
     list: '/api/v1/friends/',
+    search: '/api/v1/friends/search/',
     remove: (userId: string | number) => `/api/v1/friends/${userId}/`,
     logs: (userId: string | number) => `/api/v1/friends/${userId}/logs/`,
     request: '/api/v1/friends/request/',
@@ -28,6 +29,5 @@ export const API_PATHS = {
   },
   users: {
     me: '/api/v1/users/me/',
-    search: '/api/v1/users/search/',
   },
 } as const;

@@ -5,9 +5,9 @@ import { Avatar, Badge, Button } from '@/components/ui';
 import {
   useFriendsList,
   useFriendRequests,
+  useSearchFriends,
   useSendFriendRequest,
 } from '@/hooks/queries/friends';
-import { useSearchUsers } from '@/hooks/queries/users';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { getErrorMessage } from '@/api/errors';
@@ -87,7 +87,7 @@ export function AddFriendSearch() {
     isLoading,
     isFetching,
     error,
-  } = useSearchUsers(debouncedQuery, canSearch);
+  } = useSearchFriends(debouncedQuery, canSearch);
 
   const loading = canSearch && (isLoading || isFetching);
   const errorMessage = error ? getErrorMessage(error) : null;

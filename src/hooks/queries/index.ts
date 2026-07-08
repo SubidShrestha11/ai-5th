@@ -3,6 +3,7 @@ export { useFeed } from '@/hooks/queries/feed';
 export {
   useFriendsList,
   useFriendRequests,
+  useSearchFriends,
   useSendFriendRequest,
   useRespondToFriendRequest,
   useRemoveFriend,
@@ -19,4 +20,4 @@ export {
   useUpdateMovieLog,
   useDeleteMovieLog,
 } from '@/hooks/queries/movies';
-export { useCurrentUser, useUpdateProfile, useSearchUsers } from '@/hooks/queries/users';
+export { useCurrentUser, useUpdateProfile } from '@/hooks/queries/users';

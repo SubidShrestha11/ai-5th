@@ -19,14 +19,6 @@ export function useCurrentUser(enabled = true) {
   });
 }
 
-export function useSearchUsers(query: string, enabled = query.trim().length >= 2) {
-  return useQuery({
-    queryKey: queryKeys.users.search(query),
-    queryFn: () => usersService.searchUsers(query),
-    enabled,
-  });
-}
-
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
   const setSession = useAuthStore(state => state.setSession);
