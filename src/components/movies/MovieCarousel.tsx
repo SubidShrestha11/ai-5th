@@ -9,6 +9,7 @@ interface MovieCarouselProps {
   subtitle?: string;
   movies: Movie[];
   loading?: boolean;
+  error?: string | null;
   cardSize?: 'sm' | 'md' | 'lg';
   action?: { label: string; href: string };
 }
@@ -18,6 +19,7 @@ export function MovieCarousel({
   subtitle,
   movies,
   loading = false,
+  error = null,
   cardSize = 'md',
   action,
 }: MovieCarouselProps) {
@@ -70,6 +72,8 @@ export function MovieCarousel({
         <div className="flex items-center justify-center h-48">
           <Spinner size="lg" />
         </div>
+      ) : error ? (
+        <p className="text-sm text-red-400 py-8">{error}</p>
       ) : (
         <div
           ref={scrollRef}

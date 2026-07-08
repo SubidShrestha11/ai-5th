@@ -1,18 +1,20 @@
+/** Set via VITE_API_BASE_URL at build time (no trailing slash). */
 export const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ??
-  'http://localhost:8000';
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 
 export const API_PATHS = {
   auth: {
     login: '/api/v1/auth/login/',
     logout: '/api/v1/auth/logout/',
     register: '/api/v1/auth/register/',
-    /** Django SimpleJWT default; change if your backend uses a different path */
-    refresh: '/api/v1/auth/token/refresh/',
+  },
+  feed: {
+    list: '/api/v1/feed/',
   },
   friends: {
     list: '/api/v1/friends/',
     remove: (userId: string | number) => `/api/v1/friends/${userId}/`,
+    logs: (userId: string | number) => `/api/v1/friends/${userId}/logs/`,
     request: '/api/v1/friends/request/',
     respond: (requestId: string | number) => `/api/v1/friends/request/${requestId}/`,
     requests: '/api/v1/friends/requests/',

@@ -1,55 +1,28 @@
 import { Film, Sparkles } from 'lucide-react';
 import { FeaturedMovie } from '@/components/movies/FeaturedMovie';
 import { MovieCarousel } from '@/components/movies/MovieCarousel';
-import { MovieCard } from '@/components/movies/MovieCard';
 import { Button } from '@/components/ui';
 import { useTrending, useTopRated, usePopular } from '@/hooks/useMovies';
 import { useSuggestions } from '@/hooks/useSuggestions';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
-import { MOCK_MOVIES, CURATED_COLLECTIONS } from '@/lib/mockData';
-
-function CollectionSection({ collection }: { collection: (typeof CURATED_COLLECTIONS)[0] }) {
-  const movies = MOCK_MOVIES.filter(m => collection.movieIds.includes(m.id));
-  return (
-    <section key={collection.id} className="space-y-5">
-      <div className="flex items-end justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="w-1 h-4 rounded-full bg-violet-400" />
-            <span className="text-xs font-semibold text-violet-400 uppercase tracking-widest">
-              Curated Collection
-            </span>
-          </div>
-          <h2 className="text-xl font-bold font-serif text-white">{collection.title}</h2>
-          <p className="text-sm text-slate-400 mt-0.5">{collection.description}</p>
-        </div>
-      </div>
-      <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2" role="list">
-        {movies.map(movie => (
-          <div key={movie.id} role="listitem">
-            <MovieCard movie={movie} size="md" />
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
 
 export function HomePage() {
   const { isAuthenticated } = useAuthStore();
   const { openAuthModal } = useUIStore();
-  const { movies: trending, loading: trendingLoading } = useTrending();
-  const { movies: topRated, loading: topRatedLoading } = useTopRated();
-  const { movies: popular, loading: popularLoading } = usePopular();
-  const { movies: suggestions, loading: suggestionsLoading } = useSuggestions();
+  const { movies: trending, loading: trendingLoading, error: trendingError } = useTrending();
+  const { movies: topRated, loading: topRatedLoading, error: topRatedError } = useTopRated();
+  const { movies: popular, loading: popularLoading, error: popularError } = usePopular();
+  const {
+    movies: suggestions,
+    loading: suggestionsLoading,
+    error: suggestionsError,
+  } = useSuggestions();
 
-  const featured = trending[0] ?? MOCK_MOVIES[0];
-  const sortedByRating = [...MOCK_MOVIES].sort((a, b) => b.vote_average - a.vote_average);
+  const featured = trending[0] ?? popular[0] ?? null;
 
   return (
     <div className="space-y-12">
-      {/* Hero CTA for non-auth users */}
       {!isAuthenticated && (
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#101827] via-[#162032] to-[#101827] border border-white/8 p-8 sm:p-12">
           <div className="absolute top-0 right-0 w-96 h-96 bg-violet-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" aria-hidden />
@@ -89,7 +62,6 @@ export function HomePage() {
         </div>
       )}
 
-      {/* Featured Film */}
       {featured && (
         <section>
           <div className="flex items-center gap-2 mb-5">
@@ -102,50 +74,44 @@ export function HomePage() {
         </section>
       )}
 
-      {/* Trending */}
       <MovieCarousel
         title="Trending This Week"
         subtitle="What the world is watching"
-        movies={trending.length > 0 ? trending : MOCK_MOVIES.slice(0, 10)}
+        movies={trending}
         loading={trendingLoading}
+        error={trendingError}
         cardSize="md"
       />
 
-      {/* Suggestions (auth only) */}
       {isAuthenticated && (
         <MovieCarousel
           title="Recommended For You"
-          subtitle="Based on your watching history"
+          subtitle="Popular picks you haven't logged yet"
           movies={suggestions}
           loading={suggestionsLoading}
+          error={suggestionsError}
           cardSize="md"
         />
       )}
 
-      {/* Top Rated */}
       <MovieCarousel
         title="All-Time Classics"
-        subtitle="The highest rated films of all time"
-        movies={topRated.length > 0 ? topRated : sortedByRating.slice(0, 10)}
+        subtitle="The highest rated films on TMDB"
+        movies={topRated}
         loading={topRatedLoading}
+        error={topRatedError}
         cardSize="md"
       />
 
-      {/* Curated Collections */}
-      {CURATED_COLLECTIONS.map(collection => (
-        <CollectionSection key={collection.id} collection={collection} />
-      ))}
-
-      {/* Popular Now */}
       <MovieCarousel
         title="Popular Now"
         subtitle="What everyone is talking about"
-        movies={popular.length > 0 ? popular : MOCK_MOVIES.slice(5, 15)}
+        movies={popular}
         loading={popularLoading}
+        error={popularError}
         cardSize="md"
       />
 
-      {/* Footer CTA */}
       {!isAuthenticated && (
         <div className="text-center py-8 border-t border-white/8">
           <p className="text-slate-400 mb-4">

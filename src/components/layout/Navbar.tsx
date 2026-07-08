@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Film, Search, Users, BookOpen, LogOut, User, Bell, Menu, X } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
-import { useFriendStore } from '@/store/friendStore';
+import { useFriendRequests } from '@/hooks/queries/friends';
 import { useLogout } from '@/hooks/queries/auth';
 import { getErrorMessage } from '@/api/errors';
 import { Avatar, Button } from '@/components/ui';
@@ -11,7 +11,7 @@ import { Avatar, Button } from '@/components/ui';
 export function Navbar() {
   const { user, isAuthenticated } = useAuthStore();
   const { openAuthModal, addToast } = useUIStore();
-  const { incomingRequests } = useFriendStore();
+  const { data: incomingRequests = [] } = useFriendRequests('incoming', isAuthenticated);
   const logoutMutation = useLogout();
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -93,7 +93,7 @@ export function Navbar() {
 
               {/* Profile link */}
               <Link
-                to={`/profile/${user.username}`}
+                to="/profile/me"
                 className="flex items-center gap-2 pl-1 pr-3 py-1.5 rounded-full hover:bg-white/8 transition-all duration-200 group"
               >
                 <Avatar src={user.avatar} name={user.displayName} size="sm" />
@@ -169,7 +169,7 @@ export function Navbar() {
           {isAuthenticated && (
             <>
               <Link
-                to={`/profile/${user?.username}`}
+                to="/profile/me"
                 onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/8 transition-all"
               >

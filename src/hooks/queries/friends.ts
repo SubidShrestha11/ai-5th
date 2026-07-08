@@ -4,7 +4,6 @@ import { queryKeys } from '@/api/queryKeys';
 import { getErrorMessage } from '@/api/errors';
 import type { Friend, FriendRequest } from '@/types';
 
-/** Example: list friends with cached loading/error states */
 export function useFriendsList(enabled = true) {
   return useQuery({
     queryKey: queryKeys.friends.list(),
@@ -13,66 +12,66 @@ export function useFriendsList(enabled = true) {
   });
 }
 
-/** Example: pending friend requests */
-export function useFriendRequests(enabled = true) {
+export function useFriendRequests(
+  direction: 'incoming' | 'outgoing' = 'incoming',
+  enabled = true
+) {
   return useQuery({
-    queryKey: queryKeys.friends.requests(),
-    queryFn: () => friendsService.listFriendRequests(),
+    queryKey: queryKeys.friends.requests(direction),
+    queryFn: () => friendsService.listFriendRequests(direction),
     enabled,
   });
 }
 
-/** Example: send friend request */
 export function useSendFriendRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userId: string) => friendsService.sendFriendRequest(userId),
+    mutationFn: (receiverId: string) => friendsService.sendFriendRequest(receiverId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.friends.requests() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.friends.requests('outgoing') });
     },
   });
 }
 
-/** Example: accept/decline with optimistic update */
 export function useRespondToFriendRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({
       requestId,
-      status,
+      action,
     }: {
       requestId: string;
-      status: 'accepted' | 'declined';
-    }) => friendsService.respondToFriendRequest(requestId, status),
-    onMutate: async ({ requestId, status }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.friends.requests() });
+      action: 'accept' | 'decline';
+    }) => friendsService.respondToFriendRequest(requestId, action),
+    onMutate: async ({ requestId, action }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.friends.requests('incoming') });
       await queryClient.cancelQueries({ queryKey: queryKeys.friends.list() });
 
       const previousRequests = queryClient.getQueryData<FriendRequest[]>(
-        queryKeys.friends.requests()
+        queryKeys.friends.requests('incoming')
       );
       const previousFriends = queryClient.getQueryData<Friend[]>(
         queryKeys.friends.list()
       );
 
       queryClient.setQueryData<FriendRequest[]>(
-        queryKeys.friends.requests(),
+        queryKeys.friends.requests('incoming'),
         current => current?.filter(request => request.id !== requestId) ?? []
       );
 
-      if (status === 'accepted') {
+      if (action === 'accept') {
         const acceptedRequest = previousRequests?.find(request => request.id === requestId);
         if (acceptedRequest) {
           queryClient.setQueryData<Friend[]>(queryKeys.friends.list(), current => [
             ...(current ?? []),
             {
-              id: acceptedRequest.fromUserId,
-              username: acceptedRequest.fromUsername,
-              displayName: acceptedRequest.fromDisplayName,
-              avatar: acceptedRequest.fromAvatar,
-              moviesWatched: 0,
+              id: acceptedRequest.senderId,
+              email: acceptedRequest.senderEmail,
+              displayName: acceptedRequest.senderDisplayName,
+              avatar: acceptedRequest.senderAvatar,
+              bio: '',
               recentActivity: null,
             },
           ]);
@@ -83,7 +82,10 @@ export function useRespondToFriendRequest() {
     },
     onError: (_error, _variables, context) => {
       if (context?.previousRequests) {
-        queryClient.setQueryData(queryKeys.friends.requests(), context.previousRequests);
+        queryClient.setQueryData(
+          queryKeys.friends.requests('incoming'),
+          context.previousRequests
+        );
       }
       if (context?.previousFriends) {
         queryClient.setQueryData(queryKeys.friends.list(), context.previousFriends);
@@ -98,7 +100,6 @@ export function useRespondToFriendRequest() {
   });
 }
 
-/** Example: remove friend */
 export function useRemoveFriend() {
   const queryClient = useQueryClient();
 

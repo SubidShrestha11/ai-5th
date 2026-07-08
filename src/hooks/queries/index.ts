@@ -1,4 +1,5 @@
 export { useLogin, useRegister, useLogout, useAuthBootstrap } from '@/hooks/queries/auth';
+export { useFeed } from '@/hooks/queries/feed';
 export {
   useFriendsList,
   useFriendRequests,

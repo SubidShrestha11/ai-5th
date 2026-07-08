@@ -1,48 +1,35 @@
-export interface TokenPair {
-  access: string;
-  refresh: string;
-}
-
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
 export interface RegisterRequest {
-  username: string;
   email: string;
   password: string;
   confirm_password: string;
-  display_name?: string;
 }
 
+/** JWT auth response from POST /auth/login/ and /auth/register/ */
 export interface AuthResponse {
+  user: UserProfile;
   access: string;
   refresh: string;
-  user?: ApiUser;
 }
 
-export interface RefreshTokenRequest {
-  refresh: string;
-}
-
-export interface RefreshTokenResponse {
-  access: string;
-}
-
-export interface ApiUser {
-  id: string | number;
-  username: string;
-  display_name?: string | null;
+/** Matches OpenAPI UserProfile */
+export interface UserProfile {
+  id: string;
   email: string;
-  bio?: string | null;
-  profile_image?: string | null;
-  date_joined?: string;
-  movies_watched?: number;
+  bio: string;
+  profile_image: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface UpdateProfileRequest {
-  bio?: string | null;
-  profile_image?: string | null;
-  display_name?: string;
+  bio?: string;
+  profile_image?: File | null;
 }
+
+/** @deprecated Use UserProfile */
+export type ApiUser = UserProfile;

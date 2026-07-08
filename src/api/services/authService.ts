@@ -1,34 +1,24 @@
 import { API_PATHS } from '@/api/config';
-import { apiClient } from '@/api/client';
+import { apiClient, postAuthRequest } from '@/api/client';
 import { tokenStorage } from '@/api/tokenStorage';
-import type {
-  AuthResponse,
-  LoginRequest,
-  RefreshTokenResponse,
-  RegisterRequest,
-} from '@/api/types/auth';
-import type { ApiUser } from '@/api/types/auth';
+import type { LoginRequest, RegisterRequest, UserProfile } from '@/api/types/auth';
 import { usersService } from '@/api/services/usersService';
 
+function extractAuthUser(data: Record<string, unknown>): UserProfile {
+  const user = data.user;
+  if (!user || typeof user !== 'object') {
+    throw new Error('Invalid auth response: missing user');
+  }
+  return user as UserProfile;
+}
+
 export const authService = {
-  async login(payload: LoginRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>(
-      API_PATHS.auth.login,
-      payload,
-      { auth: false }
-    );
-    tokenStorage.setTokens(response.access, response.refresh);
-    return response;
+  async login(payload: LoginRequest): Promise<UserProfile> {
+    return postAuthRequest(API_PATHS.auth.login, payload, extractAuthUser);
   },
 
-  async register(payload: RegisterRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>(
-      API_PATHS.auth.register,
-      payload,
-      { auth: false }
-    );
-    tokenStorage.setTokens(response.access, response.refresh);
-    return response;
+  async register(payload: RegisterRequest): Promise<UserProfile> {
+    return postAuthRequest(API_PATHS.auth.register, payload, extractAuthUser);
   },
 
   async logout(): Promise<void> {
@@ -42,20 +32,7 @@ export const authService = {
     }
   },
 
-  async refreshAccessToken(): Promise<string | null> {
-    const refresh = tokenStorage.getRefreshToken();
-    if (!refresh) return null;
-
-    const response = await apiClient.post<RefreshTokenResponse>(
-      API_PATHS.auth.refresh,
-      { refresh },
-      { auth: false }
-    );
-    tokenStorage.setAccessToken(response.access);
-    return response.access;
-  },
-
-  async fetchCurrentUser(): Promise<ApiUser> {
+  async fetchCurrentUser(): Promise<UserProfile> {
     return usersService.getMeRaw();
   },
 

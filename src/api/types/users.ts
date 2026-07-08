@@ -1,1 +1,1 @@
-export type { ApiUser, UpdateProfileRequest } from '@/api/types/auth';
+export type { UserProfile, UpdateProfileRequest } from '@/api/types/auth';

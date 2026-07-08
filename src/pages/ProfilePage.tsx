@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
-import { Film, Heart, Star, Calendar, Edit3, BookOpen } from 'lucide-react';
+import { Film, Star, Calendar, Edit3, BookOpen } from 'lucide-react';
 import type { DiaryEntry } from '@/types';
-import { Avatar, Badge, Button, StarRating, Modal, Input } from '@/components/ui';
-import { MovieCard } from '@/components/movies/MovieCard';
+import { Avatar, Button, StarRating, Modal, Input } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
-import { useMovieStore } from '@/store/movieStore';
 import { useUIStore } from '@/store/uiStore';
 import { useUpdateProfile } from '@/hooks/queries/users';
+import { useMovieLogs } from '@/hooks/queries/movies';
 import { getErrorMessage } from '@/api/errors';
-import { MOCK_MOVIES } from '@/lib/mockData';
 import { formatDate, posterUrl, releaseYear } from '@/lib/utils';
 
 function DiaryEntryCard({ entry }: { entry: DiaryEntry }) {
@@ -39,9 +37,6 @@ function DiaryEntryCard({ entry }: { entry: DiaryEntry }) {
             <Calendar size={10} />
             {formatDate(entry.watchedAt)}
           </span>
-          {!entry.isPublic && (
-            <Badge variant="default" size="sm">Private</Badge>
-          )}
         </div>
         {entry.rating !== null && (
           <StarRating value={entry.rating} readonly size="sm" className="mt-1" />
@@ -64,25 +59,42 @@ function DiaryEntryCard({ entry }: { entry: DiaryEntry }) {
 }
 
 export function ProfilePage() {
-  const { username } = useParams<{ username: string }>();
+  const { userId } = useParams<{ userId: string }>();
   const { user, isAuthenticated } = useAuthStore();
   const updateProfileMutation = useUpdateProfile();
-  const { diary, favorites } = useMovieStore();
+  const {
+    data: diary = [],
+    isLoading: logsLoading,
+    error: logsQueryError,
+  } = useMovieLogs(isAuthenticated && (userId === 'me' || user?.id === userId));
   const { addToast } = useUIStore();
-  const [tab, setTab] = useState<'diary' | 'reviews' | 'favorites'>('diary');
+  const [tab, setTab] = useState<'diary' | 'reviews'>('diary');
   const [editOpen, setEditOpen] = useState(false);
-  const [editName, setEditName] = useState(user?.displayName ?? '');
   const [editBio, setEditBio] = useState(user?.bio ?? '');
 
-  const isOwnProfile = isAuthenticated && user?.username === username;
+  const isOwnProfile = isAuthenticated && (userId === 'me' || user?.id === userId);
 
-  if (!username) return <Navigate to="/" replace />;
+  if (!userId) return <Navigate to="/" replace />;
+
+  if (isOwnProfile && !user) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (!isOwnProfile) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-slate-400">Only your own profile is available right now.</p>
+        <Link to="/" className="text-sky-400 hover:text-sky-300 mt-3 inline-block">
+          Return home
+        </Link>
+      </div>
+    );
+  }
 
   const handleSaveProfile = async () => {
     try {
       await updateProfileMutation.mutateAsync({
-        displayName: editName.trim() || (user?.displayName ?? ''),
-        bio: editBio.trim() || null,
+        bio: editBio.trim(),
       });
       addToast('success', 'Profile updated!');
       setEditOpen(false);
@@ -91,22 +103,21 @@ export function ProfilePage() {
     }
   };
 
-  const diaryEntries = diary;
   const reviewEntries = diary.filter(e => e.review);
-  const favoriteMovies = MOCK_MOVIES.filter(m => favorites.includes(m.id));
-  const avgRating = diary.filter(e => e.rating).reduce((sum, e, _, arr) => sum + (e.rating ?? 0) / arr.length, 0);
+  const ratedEntries = diary.filter(e => e.rating !== null);
+  const avgRating =
+    ratedEntries.length > 0
+      ? ratedEntries.reduce((sum, e) => sum + (e.rating ?? 0), 0) / ratedEntries.length
+      : 0;
 
   const tabs = [
-    { id: 'diary' as const, label: 'Diary', icon: <BookOpen size={14} />, count: diaryEntries.length },
+    { id: 'diary' as const, label: 'Diary', icon: <BookOpen size={14} />, count: diary.length },
     { id: 'reviews' as const, label: 'Reviews', icon: <Star size={14} />, count: reviewEntries.length },
-    { id: 'favorites' as const, label: 'Favorites', icon: <Heart size={14} />, count: favoriteMovies.length },
   ];
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
-      {/* Profile header */}
       <div className="bg-[#101827] rounded-2xl border border-white/8 overflow-hidden">
-        {/* Banner */}
         <div className="h-24 bg-gradient-to-r from-[#162032] via-[#1a2640] to-[#162032] relative">
           <div className="absolute inset-0 bg-gradient-to-br from-sky-300/5 to-violet-500/10" />
         </div>
@@ -114,42 +125,32 @@ export function ProfilePage() {
         <div className="px-6 pb-6 -mt-10 relative">
           <div className="flex items-end justify-between">
             <div className="ring-4 ring-[#101827] rounded-full">
-              <Avatar
-                name={isOwnProfile ? (user?.displayName ?? username) : username}
-                src={isOwnProfile ? user?.avatar : null}
-                size="xl"
-              />
+              <Avatar name={user!.displayName} src={user!.avatar} size="xl" />
             </div>
-            {isOwnProfile && (
-              <Button
-                variant="outline"
-                size="sm"
-                icon={<Edit3 size={13} />}
-                onClick={() => {
-                  setEditName(user?.displayName ?? '');
-                  setEditBio(user?.bio ?? '');
-                  setEditOpen(true);
-                }}
-              >
-                Edit profile
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<Edit3 size={13} />}
+              onClick={() => {
+                setEditBio(user?.bio ?? '');
+                setEditOpen(true);
+              }}
+            >
+              Edit profile
+            </Button>
           </div>
 
           <div className="mt-4">
-            <h1 className="text-2xl font-bold font-serif text-white">
-              {isOwnProfile ? user?.displayName : username}
-            </h1>
-            <p className="text-slate-500 text-sm">@{username}</p>
-            {isOwnProfile && user?.bio && (
-              <p className="text-slate-300 text-sm mt-2">{user.bio}</p>
+            <h1 className="text-2xl font-bold font-serif text-white">{user!.displayName}</h1>
+            <p className="text-slate-500 text-sm">{user!.email}</p>
+            {user!.bio && (
+              <p className="text-slate-300 text-sm mt-2">{user!.bio}</p>
             )}
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-5 pt-5 border-t border-white/8">
+          <div className="grid grid-cols-2 gap-4 mt-5 pt-5 border-t border-white/8">
             <div className="text-center">
-              <p className="text-2xl font-bold text-white font-serif">{diaryEntries.length}</p>
+              <p className="text-2xl font-bold text-white font-serif">{diary.length}</p>
               <p className="text-xs text-slate-500 flex items-center justify-center gap-1 mt-0.5">
                 <Film size={11} /> Films
               </p>
@@ -162,17 +163,10 @@ export function ProfilePage() {
                 <Star size={11} /> Avg Rating
               </p>
             </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-white font-serif">{favoriteMovies.length}</p>
-              <p className="text-xs text-slate-500 flex items-center justify-center gap-1 mt-0.5">
-                <Heart size={11} /> Favorites
-              </p>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 bg-[#101827] border border-white/8 rounded-xl p-1">
         {tabs.map(t => (
           <button
@@ -196,10 +190,17 @@ export function ProfilePage() {
         ))}
       </div>
 
-      {/* Tab content */}
-      {tab === 'diary' && (
+      {logsLoading && (
+        <p className="text-sm text-slate-500 text-center py-8">Loading your diary…</p>
+      )}
+
+      {logsQueryError && (
+        <p className="text-sm text-red-400 text-center py-8">{getErrorMessage(logsQueryError)}</p>
+      )}
+
+      {tab === 'diary' && !logsLoading && (
         <div className="space-y-3">
-          {diaryEntries.length === 0 ? (
+          {diary.length === 0 ? (
             <div className="text-center py-16 rounded-2xl border border-white/8 bg-[#101827]">
               <BookOpen size={32} className="text-slate-600 mx-auto mb-3" />
               <p className="text-slate-400 font-medium">No films logged yet</p>
@@ -211,14 +212,14 @@ export function ProfilePage() {
               </Link>
             </div>
           ) : (
-            diaryEntries.map(entry => (
+            diary.map(entry => (
               <DiaryEntryCard key={entry.id} entry={entry} />
             ))
           )}
         </div>
       )}
 
-      {tab === 'reviews' && (
+      {tab === 'reviews' && !logsLoading && (
         <div className="space-y-4">
           {reviewEntries.length === 0 ? (
             <div className="text-center py-16 rounded-2xl border border-white/8 bg-[#101827]">
@@ -263,27 +264,6 @@ export function ProfilePage() {
         </div>
       )}
 
-      {tab === 'favorites' && (
-        <div>
-          {favoriteMovies.length === 0 ? (
-            <div className="text-center py-16 rounded-2xl border border-white/8 bg-[#101827]">
-              <Heart size={32} className="text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-400 font-medium">No favorites yet</p>
-              <p className="text-slate-500 text-sm mt-1">
-                Heart a film to add it to your favorites
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-4">
-              {favoriteMovies.map(movie => (
-                <MovieCard key={movie.id} movie={movie} size="md" />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Edit profile modal */}
       <Modal
         open={editOpen}
         onClose={() => setEditOpen(false)}
@@ -297,12 +277,6 @@ export function ProfilePage() {
         }
       >
         <div className="space-y-4">
-          <Input
-            label="Display Name"
-            value={editName}
-            onChange={e => setEditName(e.target.value)}
-            placeholder="Your display name"
-          />
           <Input
             as="textarea"
             label="Bio"

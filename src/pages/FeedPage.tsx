@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Users, BookOpen, Star, Loader2 } from 'lucide-react';
 import { FeedCard } from '@/components/social/FeedCard';
 import { Button } from '@/components/ui';
-import { useFeed } from '@/hooks/useFeed';
+import { useFeed } from '@/hooks/queries/feed';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import type { FeedItemType } from '@/types';
@@ -13,7 +13,7 @@ type Filter = 'all' | FeedItemType;
 export function FeedPage() {
   const { isAuthenticated } = useAuthStore();
   const { openAuthModal } = useUIStore();
-  const { items, loading } = useFeed();
+  const { data: items = [], isLoading: loading } = useFeed();
   const [filter, setFilter] = useState<Filter>('all');
 
   if (!isAuthenticated) {
@@ -50,7 +50,6 @@ export function FeedPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
-      {/* Header */}
       <div className="flex items-end justify-between">
         <div>
           <h1 className="text-3xl font-bold font-serif text-white">Activity Feed</h1>
@@ -61,7 +60,6 @@ export function FeedPage() {
         </Link>
       </div>
 
-      {/* Filters */}
       <div className="flex gap-2 flex-wrap">
         {filters.map(f => (
           <button
@@ -80,7 +78,6 @@ export function FeedPage() {
         ))}
       </div>
 
-      {/* Content */}
       {loading ? (
         <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
           <Loader2 size={20} className="animate-spin" />

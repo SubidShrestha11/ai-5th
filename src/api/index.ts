@@ -3,6 +3,7 @@ export { ApiError, getErrorMessage } from '@/api/errors';
 export { tokenStorage } from '@/api/tokenStorage';
 export { apiClient, setAuthFailureHandler } from '@/api/client';
 export { authService } from '@/api/services/authService';
+export { feedService } from '@/api/services/feedService';
 export { friendsService } from '@/api/services/friendsService';
 export { moviesService } from '@/api/services/moviesService';
 export { usersService } from '@/api/services/usersService';

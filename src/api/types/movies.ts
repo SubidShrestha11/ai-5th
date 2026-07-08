@@ -1,87 +1,65 @@
 export interface ApiMovie {
-  id: number;
+  tmdb_id: number;
   title: string;
-  poster_path: string | null;
-  backdrop_path: string | null;
-  release_date: string;
+  overview?: string;
+  poster_path?: string | null;
+  poster_url?: string | null;
+  release_date?: string | null;
   vote_average: number;
-  vote_count: number;
-  genre_ids: number[];
-  overview: string;
-}
-
-export interface ApiGenre {
-  id: number;
-  name: string;
-}
-
-export interface ApiCastMember {
-  id: number;
-  name: string;
-  character: string;
-  profile_path: string | null;
-}
-
-export interface ApiCrewMember {
-  id: number;
-  name: string;
-  job: string;
-  department: string;
+  runtime?: number | null;
+  genres?: unknown;
 }
 
 export interface ApiMovieDetail extends ApiMovie {
-  genres: ApiGenre[];
-  runtime: number;
-  tagline: string;
-  status: string;
-  credits?: {
-    cast: ApiCastMember[];
-    crew: ApiCrewMember[];
-  };
+  genres?: Array<{ id?: number; name?: string } | Record<string, unknown>>;
 }
 
 export interface ApiMovieLog {
-  id: string | number;
-  tmdb_id: number;
-  movie_title?: string;
-  movie_poster?: string | null;
-  movie_year?: string;
-  rating: number | null;
-  review: string | null;
+  id: string;
+  movie: ApiMovie;
   watched_date: string;
-  is_public?: boolean;
+  rating?: string | null;
+  review_text?: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface CreateMovieLogRequest {
+export interface MovieLogCreateRequest {
   tmdb_id: number;
-  rating?: number | null;
-  review?: string | null;
   watched_date: string;
-  is_public?: boolean;
+  rating?: string | null;
+  review_text?: string;
 }
 
-export interface UpdateMovieLogRequest {
-  rating?: number | null;
-  review?: string | null;
+export interface MovieLogUpdateRequest {
   watched_date?: string;
-  is_public?: boolean;
+  rating?: string | null;
+  review_text?: string;
 }
 
 export interface MovieSearchParams {
-  q: string;
+  q?: string;
   page?: number;
 }
 
-export interface PaginatedMoviesResponse {
-  count?: number;
+export interface TMDBMovie extends ApiMovie {}
+
+export interface TMDBPaginatedResponse {
+  page: number;
+  total_pages: number;
+  total_results: number;
   next?: string | null;
   previous?: string | null;
-  results: ApiMovie[];
+  results: TMDBMovie[];
+}
+
+export interface TMDBBrowseResponse extends TMDBPaginatedResponse {
+  status: 'ready' | 'pending';
 }
 
 export interface PaginatedMovieLogsResponse {
-  count?: number;
-  next?: string | null;
-  previous?: string | null;
+  count: number;
+  next: string | null;
+  previous: string | null;
   results: ApiMovieLog[];
 }

@@ -3,10 +3,15 @@ export const queryKeys = {
     all: ['auth'] as const,
     me: () => [...queryKeys.auth.all, 'me'] as const,
   },
+  feed: {
+    all: ['feed'] as const,
+    list: (page = 1) => [...queryKeys.feed.all, 'list', page] as const,
+  },
   friends: {
     all: ['friends'] as const,
     list: () => [...queryKeys.friends.all, 'list'] as const,
-    requests: () => [...queryKeys.friends.all, 'requests'] as const,
+    requests: (direction: 'incoming' | 'outgoing' = 'incoming') =>
+      [...queryKeys.friends.all, 'requests', direction] as const,
   },
   movies: {
     all: ['movies'] as const,

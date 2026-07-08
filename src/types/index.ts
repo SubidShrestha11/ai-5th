@@ -50,13 +50,12 @@ export interface MovieDetail {
 
 export interface User {
   id: string;
-  username: string;
-  displayName: string;
   email: string;
-  bio: string | null;
+  bio: string;
   avatar: string | null;
   createdAt: string;
-  moviesWatched: number;
+  updatedAt: string;
+  displayName: string;
 }
 
 export interface DiaryEntry {
@@ -68,26 +67,27 @@ export interface DiaryEntry {
   watchedAt: string;
   rating: number | null;
   review: string | null;
-  isPublic: boolean;
 }
 
 export interface FriendRequest {
   id: string;
-  fromUserId: string;
-  fromUsername: string;
-  fromDisplayName: string;
-  fromAvatar: string | null;
-  toUserId: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  senderId: string;
+  senderEmail: string;
+  senderDisplayName: string;
+  senderAvatar: string | null;
+  receiverId: string;
+  receiverEmail: string;
+  status: 'pending' | 'accepted' | 'declined';
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface Friend {
   id: string;
-  username: string;
-  displayName: string;
+  email: string;
+  bio: string;
   avatar: string | null;
-  moviesWatched: number;
+  displayName: string;
   recentActivity: DiaryEntry | null;
 }
 
@@ -97,7 +97,7 @@ export interface FeedItem {
   id: string;
   type: FeedItemType;
   userId: string;
-  username: string;
+  userEmail: string;
   displayName: string;
   userAvatar: string | null;
   movieId?: number;
@@ -106,7 +106,7 @@ export interface FeedItem {
   movieYear?: string;
   rating?: number;
   reviewText?: string;
-  friendUsername?: string;
+  friendEmail?: string;
   createdAt: string;
 }
 
@@ -126,5 +126,4 @@ export interface AuthModalState {
 
 export interface SearchResults {
   movies: Movie[];
-  users: User[];
 }

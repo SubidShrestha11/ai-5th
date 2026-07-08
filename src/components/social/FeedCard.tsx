@@ -17,13 +17,13 @@ export function FeedCard({ item }: FeedCardProps) {
         <Avatar name={item.displayName} src={item.userAvatar} size="sm" />
         <p className="text-sm text-slate-400 flex-1">
           <Link
-            to={`/profile/${item.username}`}
+            to={`/profile/${item.userId}`}
             className="font-medium text-slate-200 hover:text-sky-300 transition-colors"
           >
             {item.displayName}
           </Link>{' '}
           became friends with{' '}
-          <span className="font-medium text-slate-200">{item.friendUsername}</span>
+          <span className="font-medium text-slate-200">{item.friendEmail}</span>
         </p>
         <div className="flex items-center gap-1 text-violet-400">
           <UserPlus size={14} />
@@ -36,18 +36,17 @@ export function FeedCard({ item }: FeedCardProps) {
   return (
     <article className="bg-[#101827] rounded-2xl border border-white/8 overflow-hidden hover:border-white/15 transition-all duration-300">
       <div className="p-5">
-        {/* Header */}
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
             <Avatar name={item.displayName} src={item.userAvatar} size="sm" />
             <div>
               <Link
-                to={`/profile/${item.username}`}
+                to={`/profile/${item.userId}`}
                 className="font-semibold text-slate-100 hover:text-sky-300 transition-colors text-sm"
               >
                 {item.displayName}
               </Link>
-              <p className="text-xs text-slate-500">@{item.username}</p>
+              <p className="text-xs text-slate-500">{item.userEmail}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -62,9 +61,7 @@ export function FeedCard({ item }: FeedCardProps) {
           </div>
         </div>
 
-        {/* Movie info */}
         <div className="flex gap-4">
-          {/* Poster */}
           <Link to={`/movie/${item.movieId}`} className="shrink-0 group">
             <div className="w-14 aspect-[2/3] rounded-lg overflow-hidden bg-[#162032] ring-1 ring-white/10 group-hover:ring-sky-300/30 transition-all">
               {poster ? (
@@ -79,7 +76,6 @@ export function FeedCard({ item }: FeedCardProps) {
             </div>
           </Link>
 
-          {/* Content */}
           <div className="flex-1 min-w-0">
             <Link
               to={`/movie/${item.movieId}`}
@@ -91,14 +87,12 @@ export function FeedCard({ item }: FeedCardProps) {
               <p className="text-xs text-slate-500 mt-0.5">{item.movieYear}</p>
             )}
 
-            {/* Rating */}
             {item.rating !== undefined && (
               <div className="mt-2">
                 <StarRating value={item.rating} readonly size="sm" />
               </div>
             )}
 
-            {/* Review text */}
             {item.reviewText && (
               <blockquote className="mt-3 text-sm text-slate-300 leading-relaxed line-clamp-3 pl-3 border-l-2 border-violet-400/40 italic">
                 {item.reviewText}
