@@ -5,11 +5,16 @@ import type { LoginRequest, RegisterRequest, UserProfile } from '@/api/types/aut
 import { usersService } from '@/api/services/usersService';
 
 function extractAuthUser(data: Record<string, unknown>): UserProfile {
-  const user = data.user;
-  if (!user || typeof user !== 'object') {
-    throw new Error('Invalid auth response: missing user');
+  const nestedUser = data.user;
+  if (nestedUser && typeof nestedUser === 'object') {
+    return nestedUser as UserProfile;
   }
-  return user as UserProfile;
+
+  if (typeof data.id === 'string' && typeof data.email === 'string') {
+    return data as unknown as UserProfile;
+  }
+
+  throw new Error('Invalid auth response: missing user profile');
 }
 
 export const authService = {

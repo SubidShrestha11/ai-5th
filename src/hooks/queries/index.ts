@@ -3,15 +3,19 @@ export { useFeed } from '@/hooks/queries/feed';
 export {
   useFriendsList,
   useFriendRequests,
+  useSearchFriends,
   useSendFriendRequest,
   useRespondToFriendRequest,
   useRemoveFriend,
+  useFriendLogs,
 } from '@/hooks/queries/friends';
 export {
   usePopularMovies,
   useSearchMovies,
+  useBrowseMovies,
   useMovieDetails,
   useMovieLogs,
+  useMovieLog,
   useCreateMovieLog,
   useUpdateMovieLog,
   useDeleteMovieLog,

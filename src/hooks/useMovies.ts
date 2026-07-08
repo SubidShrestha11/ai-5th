@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Movie, MovieDetail } from '@/types';
 import { moviesService } from '@/api/services/moviesService';
+import { useAuthStore } from '@/store/authStore';
 import { getErrorMessage } from '@/api/errors';
 
 interface UseMoviesResult {
@@ -9,70 +10,64 @@ interface UseMoviesResult {
   error: string | null;
 }
 
-export function useTrending(): UseMoviesResult {
+function useMoviesQuery(fetcher: () => Promise<Movie[]>): UseMoviesResult {
+  const isInitialized = useAuthStore(state => state.isInitialized);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isInitialized) {
+      setLoading(true);
+      return;
+    }
+
+    let cancelled = false;
+
     setLoading(true);
     setError(null);
-    moviesService
-      .getPopular(1)
-      .then(setMovies)
-      .catch(err => {
-        setMovies([]);
-        setError(getErrorMessage(err));
+    fetcher()
+      .then(results => {
+        if (!cancelled) setMovies(results);
       })
-      .finally(() => setLoading(false));
-  }, []);
+      .catch(err => {
+        if (!cancelled) {
+          setMovies([]);
+          setError(getErrorMessage(err));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isInitialized, isAuthenticated, fetcher]);
 
   return { movies, loading, error };
+}
+
+export function useTrending(): UseMoviesResult {
+  const fetcher = useCallback(() => moviesService.getPopular(1), []);
+  return useMoviesQuery(fetcher);
 }
 
 export function usePopular(): UseMoviesResult {
-  const [movies, setMovies] = useState<Movie[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    moviesService
-      .getPopular(1)
-      .then(setMovies)
-      .catch(err => {
-        setMovies([]);
-        setError(getErrorMessage(err));
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  return { movies, loading, error };
+  const fetcher = useCallback(() => moviesService.getPopular(1), []);
+  return useMoviesQuery(fetcher);
 }
 
 export function useTopRated(): UseMoviesResult {
-  const [movies, setMovies] = useState<Movie[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    moviesService
-      .getPopular(1)
-      .then(results =>
+  const fetcher = useCallback(
+    () =>
+      moviesService.getPopular(1).then(results =>
         [...results].sort((a, b) => b.vote_average - a.vote_average).slice(0, 10)
-      )
-      .then(setMovies)
-      .catch(err => {
-        setMovies([]);
-        setError(getErrorMessage(err));
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  return { movies, loading, error };
+      ),
+    []
+  );
+  return useMoviesQuery(fetcher);
 }
 
 export function useMovieDetail(movieId: number | null): {
@@ -80,34 +75,62 @@ export function useMovieDetail(movieId: number | null): {
   loading: boolean;
   error: string | null;
 } {
+  const isInitialized = useAuthStore(state => state.isInitialized);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const [movie, setMovie] = useState<MovieDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!movieId) return;
+    if (!movieId || !isInitialized) {
+      setMovie(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    let cancelled = false;
+
     setLoading(true);
     setError(null);
     moviesService
       .getMovieDetail(movieId)
-      .then(setMovie)
-      .catch(err => {
-        setMovie(null);
-        setError(getErrorMessage(err));
+      .then(result => {
+        if (!cancelled) setMovie(result);
       })
-      .finally(() => setLoading(false));
-  }, [movieId]);
+      .catch(err => {
+        if (!cancelled) {
+          setMovie(null);
+          setError(getErrorMessage(err));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [movieId, isInitialized, isAuthenticated]);
 
   return { movie, loading, error };
 }
 
 export function useRecommendations(movieId: number | null): UseMoviesResult {
+  const isInitialized = useAuthStore(state => state.isInitialized);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchRecs = useCallback(() => {
-    if (!movieId) return;
+    if (!movieId || !isInitialized) {
+      setMovies([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     moviesService
@@ -119,7 +142,7 @@ export function useRecommendations(movieId: number | null): UseMoviesResult {
         setError(getErrorMessage(err));
       })
       .finally(() => setLoading(false));
-  }, [movieId]);
+  }, [movieId, isInitialized, isAuthenticated]);
 
   useEffect(() => {
     fetchRecs();

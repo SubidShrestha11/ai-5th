@@ -1,4 +1,5 @@
-import { UserMinus, Clock, UserCheck, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { UserMinus, Clock, UserCheck, X, Send } from 'lucide-react';
 import type { Friend, FriendRequest } from '@/types';
 import { Avatar, Button, Badge } from '@/components/ui';
 import { useRespondToFriendRequest } from '@/hooks/queries/friends';
@@ -13,16 +14,18 @@ interface FriendCardProps {
 export function FriendCard({ friend, onRemove }: FriendCardProps) {
   return (
     <div className="flex items-center gap-3 p-4 bg-[#101827] rounded-xl border border-white/8 hover:border-white/15 transition-all duration-200 group">
-      <Avatar name={friend.displayName} src={friend.avatar} size="md" />
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-slate-100 leading-tight">
-          {friend.displayName}
-        </p>
-        <p className="text-xs text-slate-500">{friend.email}</p>
-        {friend.bio && (
-          <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{friend.bio}</p>
-        )}
-      </div>
+      <Link to={`/profile/${friend.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+        <Avatar name={friend.displayName} src={friend.avatar} size="md" />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-slate-100 leading-tight">
+            {friend.displayName}
+          </p>
+          <p className="text-xs text-slate-500">{friend.email}</p>
+          {friend.bio && (
+            <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{friend.bio}</p>
+          )}
+        </div>
+      </Link>
       <Button
         variant="danger"
         size="xs"
@@ -91,6 +94,25 @@ export function RequestCard({ request }: RequestCardProps) {
         >
           Decline
         </Button>
+      </div>
+    </div>
+  );
+}
+
+interface OutgoingRequestCardProps {
+  request: FriendRequest;
+}
+
+export function OutgoingRequestCard({ request }: OutgoingRequestCardProps) {
+  return (
+    <div className="flex items-center gap-3 p-4 bg-[#101827] rounded-xl border border-white/8">
+      <Avatar name={request.receiverDisplayName} src={request.receiverAvatar} size="md" />
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-slate-100 leading-tight">{request.receiverDisplayName}</p>
+        <p className="text-xs text-slate-500">{request.receiverEmail}</p>
+        <Badge variant="default" size="sm" className="mt-1">
+          <Send size={9} /> Request sent
+        </Badge>
       </div>
     </div>
   );

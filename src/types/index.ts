@@ -77,9 +77,19 @@ export interface FriendRequest {
   senderAvatar: string | null;
   receiverId: string;
   receiverEmail: string;
+  receiverDisplayName: string;
+  receiverAvatar: string | null;
   status: 'pending' | 'accepted' | 'declined';
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SearchUserResult {
+  id: string;
+  email: string;
+  bio: string;
+  avatar: string | null;
+  displayName: string;
 }
 
 export interface Friend {

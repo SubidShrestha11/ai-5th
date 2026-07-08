@@ -14,6 +14,7 @@ import type {
   MovieDetail,
   FeedItem,
   User,
+  SearchUserResult,
 } from '@/types';
 import { releaseYear } from '@/lib/utils';
 
@@ -99,9 +100,22 @@ export function mapApiFriendRequest(request: ApiFriendRequest): FriendRequest {
     senderAvatar: resolveMediaUrl(request.sender.profile_image),
     receiverId: toId(request.receiver.id),
     receiverEmail: request.receiver.email,
+    receiverDisplayName: emailLabel(request.receiver.email),
+    receiverAvatar: resolveMediaUrl(request.receiver.profile_image),
     status: request.status,
     createdAt: request.created_at,
     updatedAt: request.updated_at,
+  };
+}
+
+export function mapSearchUser(user: FriendUser): SearchUserResult {
+  const mapped = mapFriendUser(user);
+  return {
+    id: mapped.id,
+    email: mapped.email,
+    bio: mapped.bio,
+    avatar: mapped.avatar,
+    displayName: mapped.displayName,
   };
 }
 

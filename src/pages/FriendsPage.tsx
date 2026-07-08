@@ -1,5 +1,6 @@
-import { Bell, Users } from 'lucide-react';
-import { FriendCard, RequestCard } from '@/components/social/FriendCard';
+import { Bell, Send, Users } from 'lucide-react';
+import { AddFriendSearch } from '@/components/social/AddFriendSearch';
+import { FriendCard, OutgoingRequestCard, RequestCard } from '@/components/social/FriendCard';
 import { Button } from '@/components/ui';
 import {
   useFriendsList,
@@ -14,8 +15,12 @@ export function FriendsPage() {
   const { isAuthenticated } = useAuthStore();
   const { openAuthModal, addToast } = useUIStore();
   const { data: friends = [], isLoading: friendsLoading } = useFriendsList(isAuthenticated);
-  const { data: incomingRequests = [], isLoading: requestsLoading } = useFriendRequests(
+  const { data: incomingRequests = [], isLoading: incomingLoading } = useFriendRequests(
     'incoming',
+    isAuthenticated
+  );
+  const { data: outgoingRequests = [], isLoading: outgoingLoading } = useFriendRequests(
+    'outgoing',
     isAuthenticated
   );
   const removeFriendMutation = useRemoveFriend();
@@ -53,16 +58,20 @@ export function FriendsPage() {
     }
   };
 
-  const loading = friendsLoading || requestsLoading;
+  const loading = friendsLoading || incomingLoading || outgoingLoading;
+  const pendingOutgoing = outgoingRequests.filter(request => request.status === 'pending');
 
   return (
     <div className="max-w-3xl mx-auto space-y-10">
       <div>
         <h1 className="text-3xl font-bold font-serif text-white">Friends</h1>
         <p className="text-slate-400 mt-1">
-          {friends.length} friend{friends.length !== 1 ? 's' : ''} · {incomingRequests.length} pending request{incomingRequests.length !== 1 ? 's' : ''}
+          {friends.length} friend{friends.length !== 1 ? 's' : ''} · {incomingRequests.length}{' '}
+          incoming · {pendingOutgoing.length} sent
         </p>
       </div>
+
+      <AddFriendSearch />
 
       {loading && (
         <p className="text-sm text-slate-500">Loading friends…</p>
@@ -87,6 +96,25 @@ export function FriendsPage() {
         </section>
       )}
 
+      {pendingOutgoing.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Send size={16} className="text-violet-400" />
+            <h2 className="font-semibold text-white">
+              Sent Requests
+              <span className="ml-2 text-xs bg-white/8 text-slate-400 px-2 py-0.5 rounded-full">
+                {pendingOutgoing.length}
+              </span>
+            </h2>
+          </div>
+          <div className="space-y-3">
+            {pendingOutgoing.map(req => (
+              <OutgoingRequestCard key={req.id} request={req} />
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <Users size={16} className="text-violet-400" />
@@ -102,7 +130,7 @@ export function FriendsPage() {
             <Users size={32} className="text-slate-600 mx-auto mb-3" />
             <p className="text-slate-400 font-medium">No friends yet</p>
             <p className="text-slate-500 text-sm mt-1">
-              Send friend requests from profiles when user search is available
+              Search above to find people and send friend requests
             </p>
           </div>
         ) : (

@@ -23,6 +23,14 @@ export function useFriendRequests(
   });
 }
 
+export function useSearchFriends(query: string, enabled = query.trim().length >= 2) {
+  return useQuery({
+    queryKey: queryKeys.friends.search(query),
+    queryFn: () => friendsService.searchFriends(query),
+    enabled,
+  });
+}
+
 export function useSendFriendRequest() {
   const queryClient = useQueryClient();
 
@@ -108,5 +116,13 @@ export function useRemoveFriend() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.friends.list() });
     },
+  });
+}
+
+export function useFriendLogs(userId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.friends.logs(userId ?? ''),
+    queryFn: () => friendsService.listFriendLogs(userId as string),
+    enabled: enabled && Boolean(userId),
   });
 }

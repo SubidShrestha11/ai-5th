@@ -9,11 +9,11 @@ export interface RegisterRequest {
   confirm_password: string;
 }
 
-/** JWT auth response from POST /auth/login/ and /auth/register/ */
-export interface AuthResponse {
-  user: UserProfile;
-  access: string;
-  refresh: string;
+/** JWT auth response — tokens may sit alongside a nested or flat user profile. */
+export interface AuthResponse extends Partial<UserProfile> {
+  user?: UserProfile;
+  access?: string;
+  refresh?: string;
 }
 
 /** Matches OpenAPI UserProfile */

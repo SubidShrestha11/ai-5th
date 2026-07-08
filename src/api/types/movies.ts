@@ -37,6 +37,13 @@ export interface MovieLogUpdateRequest {
   review_text?: string;
 }
 
+export interface MovieLogRequest {
+  tmdb_id?: number;
+  watched_date: string;
+  rating?: string | null;
+  review_text?: string;
+}
+
 export interface MovieSearchParams {
   q?: string;
   page?: number;

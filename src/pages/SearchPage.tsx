@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Film, Search as SearchIcon, Loader2 } from 'lucide-react';
 import { MovieCard } from '@/components/movies/MovieCard';
-import { useSearchMovies } from '@/hooks/queries/movies';
+import { useSearchMovies, useBrowseMovies } from '@/hooks/queries/movies';
 import { getErrorMessage } from '@/api/errors';
 
 export function SearchPage() {
@@ -31,13 +31,24 @@ export function SearchPage() {
 
   const searchQuery = urlQuery.trim();
   const {
-    data: movies = [],
-    isLoading,
-    isFetching,
-    error,
+    data: searchResults = [],
+    isLoading: searchLoading,
+    isFetching: searchFetching,
+    error: searchError,
   } = useSearchMovies(searchQuery, searchQuery.length > 0);
+  const {
+    data: browseResults = [],
+    isLoading: browseLoading,
+    isFetching: browseFetching,
+    error: browseError,
+  } = useBrowseMovies(1, searchQuery.length === 0);
 
-  const loading = isLoading || (isFetching && searchQuery.length > 0);
+  const movies = searchQuery.length > 0 ? searchResults : browseResults;
+  const loading =
+    searchQuery.length > 0
+      ? searchLoading || (searchFetching && searchQuery.length > 0)
+      : browseLoading || browseFetching;
+  const error = searchQuery.length > 0 ? searchError : browseError;
   const errorMessage = error ? getErrorMessage(error) : null;
 
   return (
@@ -71,7 +82,21 @@ export function SearchPage() {
         </div>
       </div>
 
-      {!searchQuery && (
+      {!searchQuery && !loading && movies.length > 0 && (
+        <section className="space-y-5">
+          <div className="flex items-center gap-2">
+            <Film size={16} className="text-sky-300" />
+            <h2 className="font-semibold text-white">Popular on TMDB</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {movies.map(movie => (
+              <MovieCard key={movie.id} movie={movie} size="md" />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!searchQuery && !loading && movies.length === 0 && !errorMessage && (
         <div className="text-center py-16">
           <SearchIcon size={40} className="text-slate-700 mx-auto mb-4" />
           <p className="text-slate-400 font-medium">Start typing to search</p>
