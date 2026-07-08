@@ -1,23 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authService } from '@/api/services/authService';
-import { mapApiUser } from '@/api/mappers';
+import { mapUserProfile } from '@/api/mappers';
 import { queryKeys } from '@/api/queryKeys';
 import { getErrorMessage } from '@/api/errors';
 import { useAuthStore } from '@/store/authStore';
 import type { LoginRequest, RegisterRequest } from '@/api/types/auth';
 
-/** Example: login mutation wired to auth store + token persistence */
 export function useLogin() {
   const setSession = useAuthStore(state => state.setSession);
   const clearSession = useAuthStore(state => state.clearSession);
 
   return useMutation({
     mutationFn: async (payload: LoginRequest) => {
-      const response = await authService.login(payload);
-      const user = response.user
-        ? mapApiUser(response.user)
-        : mapApiUser(await authService.fetchCurrentUser());
-      return user;
+      const profile = await authService.login(payload);
+      return mapUserProfile(profile);
     },
     onSuccess: user => {
       setSession(user);
@@ -31,18 +27,14 @@ export function useLogin() {
   });
 }
 
-/** Example: register mutation */
 export function useRegister() {
   const setSession = useAuthStore(state => state.setSession);
   const clearSession = useAuthStore(state => state.clearSession);
 
   return useMutation({
     mutationFn: async (payload: RegisterRequest) => {
-      const response = await authService.register(payload);
-      const user = response.user
-        ? mapApiUser(response.user)
-        : mapApiUser(await authService.fetchCurrentUser());
-      return user;
+      const profile = await authService.register(payload);
+      return mapUserProfile(profile);
     },
     onSuccess: user => {
       setSession(user);
@@ -53,7 +45,6 @@ export function useRegister() {
   });
 }
 
-/** Example: logout mutation */
 export function useLogout() {
   const queryClient = useQueryClient();
   const clearSession = useAuthStore(state => state.clearSession);
@@ -67,7 +58,6 @@ export function useLogout() {
   });
 }
 
-/** Example: restore session on app load */
 export function useAuthBootstrap() {
   const initialize = useAuthStore(state => state.initialize);
 

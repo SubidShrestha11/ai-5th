@@ -1,18 +1,24 @@
-import { Bell, Users, UserSearch } from 'lucide-react';
-import { FriendCard, SuggestedUserCard, RequestCard } from '@/components/social/FriendCard';
+import { Bell, Users } from 'lucide-react';
+import { FriendCard, RequestCard } from '@/components/social/FriendCard';
 import { Button } from '@/components/ui';
-import { useFriends, useSeededFriendRequests } from '@/hooks/useFriends';
+import {
+  useFriendsList,
+  useFriendRequests,
+  useRemoveFriend,
+} from '@/hooks/queries/friends';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
-import { useFriendStore } from '@/store/friendStore';
+import { getErrorMessage } from '@/api/errors';
 
 export function FriendsPage() {
   const { isAuthenticated } = useAuthStore();
   const { openAuthModal, addToast } = useUIStore();
-  const { friends, incomingRequests, suggestedUsers } = useFriends();
-  const { removeFriend } = useFriendStore();
-
-  useSeededFriendRequests();
+  const { data: friends = [], isLoading: friendsLoading } = useFriendsList(isAuthenticated);
+  const { data: incomingRequests = [], isLoading: requestsLoading } = useFriendRequests(
+    'incoming',
+    isAuthenticated
+  );
+  const removeFriendMutation = useRemoveFriend();
 
   if (!isAuthenticated) {
     return (
@@ -38,14 +44,19 @@ export function FriendsPage() {
     );
   }
 
-  const handleRemove = (friendId: string, name: string) => {
-    removeFriend(friendId);
-    addToast('info', `Removed ${name} from friends`);
+  const handleRemove = async (friendId: string, name: string) => {
+    try {
+      await removeFriendMutation.mutateAsync(friendId);
+      addToast('info', `Removed ${name} from friends`);
+    } catch (error) {
+      addToast('error', getErrorMessage(error));
+    }
   };
+
+  const loading = friendsLoading || requestsLoading;
 
   return (
     <div className="max-w-3xl mx-auto space-y-10">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold font-serif text-white">Friends</h1>
         <p className="text-slate-400 mt-1">
@@ -53,7 +64,10 @@ export function FriendsPage() {
         </p>
       </div>
 
-      {/* Incoming Requests */}
+      {loading && (
+        <p className="text-sm text-slate-500">Loading friends…</p>
+      )}
+
       {incomingRequests.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center gap-2">
@@ -73,7 +87,6 @@ export function FriendsPage() {
         </section>
       )}
 
-      {/* Current Friends */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <Users size={16} className="text-violet-400" />
@@ -89,7 +102,7 @@ export function FriendsPage() {
             <Users size={32} className="text-slate-600 mx-auto mb-3" />
             <p className="text-slate-400 font-medium">No friends yet</p>
             <p className="text-slate-500 text-sm mt-1">
-              Send requests to film lovers below
+              Send friend requests from profiles when user search is available
             </p>
           </div>
         ) : (
@@ -100,25 +113,6 @@ export function FriendsPage() {
                 friend={friend}
                 onRemove={() => handleRemove(friend.id, friend.displayName)}
               />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Discover People */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <UserSearch size={16} className="text-sky-300" />
-          <h2 className="font-semibold text-white">Discover Film Lovers</h2>
-        </div>
-        {suggestedUsers.length === 0 ? (
-          <p className="text-slate-500 text-sm text-center py-8">
-            You're following everyone! Check back later for more suggestions.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {suggestedUsers.map(user => (
-              <SuggestedUserCard key={user.id} user={user} />
             ))}
           </div>
         )}

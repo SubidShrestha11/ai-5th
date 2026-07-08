@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Film, Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { Film, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { Modal, Button, Input } from '@/components/ui';
 import { useUIStore } from '@/store/uiStore';
 import { useLogin, useRegister } from '@/hooks/queries/auth';
@@ -14,8 +14,6 @@ export function AuthModal() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState({
-    username: '',
-    displayName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -31,11 +29,6 @@ export function AuthModal() {
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
-    if (!isLogin) {
-      if (!form.username.trim()) errs.username = 'Username is required';
-      else if (form.username.length < 3) errs.username = 'Minimum 3 characters';
-      if (!form.displayName.trim()) errs.displayName = 'Display name is required';
-    }
     if (!form.email.includes('@')) errs.email = 'Valid email required';
     if (!form.password) errs.password = 'Password is required';
     else if (form.password.length < 6) errs.password = 'Minimum 6 characters';
@@ -52,7 +45,6 @@ export function AuthModal() {
 
     const fieldMap: Record<string, string> = {
       confirm_password: 'confirmPassword',
-      display_name: 'displayName',
     };
 
     const mapped = Object.fromEntries(
@@ -75,11 +67,9 @@ export function AuthModal() {
         addToast('success', `Welcome back, ${user.displayName}!`);
       } else {
         const user = await registerMutation.mutateAsync({
-          username: form.username.trim(),
           email: form.email.trim(),
           password: form.password,
           confirm_password: form.confirmPassword,
-          display_name: form.displayName.trim(),
         });
         addToast('success', `Welcome to Letterboxd Lite, ${user.displayName}!`);
       }
@@ -94,7 +84,7 @@ export function AuthModal() {
   };
 
   const resetForm = () => {
-    setForm({ username: '', displayName: '', email: '', password: '', confirmPassword: '' });
+    setForm({ email: '', password: '', confirmPassword: '' });
     setErrors({});
     setShowPass(false);
   };
@@ -147,30 +137,6 @@ export function AuthModal() {
         </div>
 
         <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
-          {!isLogin && (
-            <>
-              <Input
-                label="Username"
-                placeholder="filmcritic42"
-                value={form.username}
-                onChange={update('username')}
-                error={errors.username}
-                icon={<User size={15} />}
-                autoComplete="username"
-                required
-              />
-              <Input
-                label="Display Name"
-                placeholder="Your Name"
-                value={form.displayName}
-                onChange={update('displayName')}
-                error={errors.displayName}
-                icon={<User size={15} />}
-                required
-              />
-            </>
-          )}
-
           <Input
             label="Email"
             type="email"

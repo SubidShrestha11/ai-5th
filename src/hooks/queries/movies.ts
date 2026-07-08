@@ -1,11 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { moviesService } from '@/api/services/moviesService';
-import { mapDiaryEntryToCreateRequest, mapDiaryEntryToUpdateRequest } from '@/api/mappers';
 import { queryKeys } from '@/api/queryKeys';
 import { getErrorMessage } from '@/api/errors';
 import type { DiaryEntry } from '@/types';
 
-/** Example: popular movies from backend TMDB proxy */
 export function usePopularMovies(page = 1) {
   return useQuery({
     queryKey: queryKeys.movies.popular(page),
@@ -13,16 +11,25 @@ export function usePopularMovies(page = 1) {
   });
 }
 
-/** Example: search movies */
-export function useSearchMovies(query: string, enabled = query.length >= 2) {
+export function useSearchMovies(query: string, enabled = query.trim().length > 0) {
   return useQuery({
     queryKey: queryKeys.movies.search(query),
-    queryFn: () => moviesService.searchMovies({ q: query }),
+    queryFn: async () => {
+      let result = await moviesService.searchMovies({ q: query });
+      let attempts = 0;
+
+      while (result.status === 'pending' && attempts < 5) {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        result = await moviesService.searchMovies({ q: query });
+        attempts += 1;
+      }
+
+      return result.movies;
+    },
     enabled,
   });
 }
 
-/** Example: movie detail by TMDB id */
 export function useMovieDetails(tmdbId: number | null) {
   return useQuery({
     queryKey: queryKeys.movies.detail(tmdbId ?? 0),
@@ -31,7 +38,6 @@ export function useMovieDetails(tmdbId: number | null) {
   });
 }
 
-/** Example: list your movie logs */
 export function useMovieLogs(enabled = true) {
   return useQuery({
     queryKey: queryKeys.movies.logs(),
@@ -40,21 +46,20 @@ export function useMovieLogs(enabled = true) {
   });
 }
 
-/** Example: create movie log */
 export function useCreateMovieLog() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (
-      entry: Pick<DiaryEntry, 'movieId' | 'rating' | 'review' | 'watchedAt' | 'isPublic'>
-    ) => moviesService.createLog(mapDiaryEntryToCreateRequest(entry)),
+      entry: Pick<DiaryEntry, 'movieId' | 'rating' | 'review' | 'watchedAt'>
+    ) => moviesService.createLog(entry),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.movies.logs() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.feed.all });
     },
   });
 }
 
-/** Example: update movie log with optimistic UI */
 export function useUpdateMovieLog() {
   const queryClient = useQueryClient();
 
@@ -64,8 +69,8 @@ export function useUpdateMovieLog() {
       updates,
     }: {
       logId: string;
-      updates: Partial<Pick<DiaryEntry, 'rating' | 'review' | 'watchedAt' | 'isPublic'>>;
-    }) => moviesService.updateLog(logId, mapDiaryEntryToUpdateRequest(updates)),
+      updates: Partial<Pick<DiaryEntry, 'rating' | 'review' | 'watchedAt'>>;
+    }) => moviesService.updateLog(logId, updates),
     onMutate: async ({ logId, updates }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.movies.logs() });
 
@@ -85,6 +90,7 @@ export function useUpdateMovieLog() {
     onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.movies.logs() });
       queryClient.invalidateQueries({ queryKey: queryKeys.movies.log(variables.logId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.feed.all });
     },
     meta: {
       errorMessage: (error: unknown) => getErrorMessage(error),
@@ -92,7 +98,6 @@ export function useUpdateMovieLog() {
   });
 }
 
-/** Example: delete movie log with optimistic UI */
 export function useDeleteMovieLog() {
   const queryClient = useQueryClient();
 
@@ -116,6 +121,7 @@ export function useDeleteMovieLog() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.movies.logs() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.feed.all });
     },
   });
 }

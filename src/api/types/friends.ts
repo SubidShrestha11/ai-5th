@@ -1,42 +1,39 @@
-export interface ApiFriend {
-  id: string | number;
-  username: string;
-  display_name: string;
-  profile_image: string | null;
-  movies_watched?: number;
-  recent_activity?: ApiMovieLogSummary | null;
-}
-
-export interface ApiFriendRequestUser {
-  id: string | number;
-  username: string;
-  display_name: string;
+export interface FriendUser {
+  id: string;
+  email: string;
+  bio: string;
   profile_image: string | null;
 }
 
-export interface ApiFriendRequest {
-  id: string | number;
-  from_user: ApiFriendRequestUser;
-  to_user: ApiFriendRequestUser;
+export interface FriendRequest {
+  id: string;
+  sender: FriendUser;
+  receiver: FriendUser;
   status: 'pending' | 'accepted' | 'declined';
   created_at: string;
+  updated_at: string;
 }
 
-export interface SendFriendRequestBody {
-  user_id: string | number;
+export interface FriendRequestCreateRequest {
+  receiver_id: string;
 }
 
-export interface RespondToFriendRequestBody {
-  status: 'accepted' | 'declined';
+export interface FriendRequestActionRequest {
+  action: 'accept' | 'decline';
 }
 
-export interface ApiMovieLogSummary {
-  id: string | number;
-  tmdb_id: number;
-  movie_title?: string;
-  movie_poster?: string | null;
-  movie_year?: string;
-  rating?: number | null;
-  review?: string | null;
-  watched_date: string;
+export interface PaginatedFriendUserList {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: FriendUser[];
 }
+
+export interface PaginatedFriendRequestList {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: FriendRequest[];
+}
+
+export type FriendRequestDirection = 'incoming' | 'outgoing';

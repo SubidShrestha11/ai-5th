@@ -1,9 +1,9 @@
-import { Link } from 'react-router-dom';
-import { UserPlus, UserMinus, Clock, UserCheck, X } from 'lucide-react';
-import type { Friend, User, FriendRequest } from '@/types';
+import { UserMinus, Clock, UserCheck, X } from 'lucide-react';
+import type { Friend, FriendRequest } from '@/types';
 import { Avatar, Button, Badge } from '@/components/ui';
-import { useFriendStore } from '@/store/friendStore';
+import { useRespondToFriendRequest } from '@/hooks/queries/friends';
 import { useUIStore } from '@/store/uiStore';
+import { getErrorMessage } from '@/api/errors';
 
 interface FriendCardProps {
   friend: Friend;
@@ -15,16 +15,13 @@ export function FriendCard({ friend, onRemove }: FriendCardProps) {
     <div className="flex items-center gap-3 p-4 bg-[#101827] rounded-xl border border-white/8 hover:border-white/15 transition-all duration-200 group">
       <Avatar name={friend.displayName} src={friend.avatar} size="md" />
       <div className="flex-1 min-w-0">
-        <Link
-          to={`/profile/${friend.username}`}
-          className="font-semibold text-slate-100 hover:text-sky-300 transition-colors block leading-tight"
-        >
+        <p className="font-semibold text-slate-100 leading-tight">
           {friend.displayName}
-        </Link>
-        <p className="text-xs text-slate-500">@{friend.username}</p>
-        <p className="text-xs text-slate-500 mt-0.5">
-          {friend.moviesWatched} films logged
         </p>
+        <p className="text-xs text-slate-500">{friend.email}</p>
+        {friend.bio && (
+          <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{friend.bio}</p>
+        )}
       </div>
       <Button
         variant="danger"
@@ -39,85 +36,38 @@ export function FriendCard({ friend, onRemove }: FriendCardProps) {
   );
 }
 
-interface SuggestedUserCardProps {
-  user: User;
-}
-
-export function SuggestedUserCard({ user }: SuggestedUserCardProps) {
-  const { sendRequest, cancelRequest, hasSentRequest } = useFriendStore();
-
-  const pending = hasSentRequest(user.id);
-
-  return (
-    <div className="flex items-center gap-3 p-4 bg-[#101827] rounded-xl border border-white/8 hover:border-white/15 transition-all duration-200">
-      <Avatar name={user.displayName} src={user.avatar} size="md" />
-      <div className="flex-1 min-w-0">
-        <Link
-          to={`/profile/${user.username}`}
-          className="font-semibold text-slate-100 hover:text-sky-300 transition-colors block leading-tight"
-        >
-          {user.displayName}
-        </Link>
-        <p className="text-xs text-slate-500">@{user.username}</p>
-        {user.bio && (
-          <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{user.bio}</p>
-        )}
-        <p className="text-xs text-slate-500 mt-0.5">{user.moviesWatched} films</p>
-      </div>
-      {pending ? (
-        <Button
-          variant="outline"
-          size="xs"
-          icon={<Clock size={12} />}
-          onClick={() => cancelRequest(user.id)}
-        >
-          Pending
-        </Button>
-      ) : (
-        <Button
-          variant="primary"
-          size="xs"
-          icon={<UserPlus size={12} />}
-          onClick={() =>
-            sendRequest({
-              id: user.id,
-              username: user.username,
-              displayName: user.displayName,
-              avatar: user.avatar,
-            })
-          }
-        >
-          Follow
-        </Button>
-      )}
-    </div>
-  );
-}
-
 interface RequestCardProps {
   request: FriendRequest;
 }
 
 export function RequestCard({ request }: RequestCardProps) {
-  const { acceptRequest, rejectRequest } = useFriendStore();
+  const respondMutation = useRespondToFriendRequest();
   const { addToast } = useUIStore();
 
-  const handleAccept = () => {
-    acceptRequest(request.id);
-    addToast('success', `You and ${request.fromDisplayName} are now friends!`);
+  const handleAccept = async () => {
+    try {
+      await respondMutation.mutateAsync({ requestId: request.id, action: 'accept' });
+      addToast('success', `You and ${request.senderDisplayName} are now friends!`);
+    } catch (error) {
+      addToast('error', getErrorMessage(error));
+    }
   };
 
-  const handleReject = () => {
-    rejectRequest(request.id);
-    addToast('info', `Declined request from ${request.fromDisplayName}`);
+  const handleDecline = async () => {
+    try {
+      await respondMutation.mutateAsync({ requestId: request.id, action: 'decline' });
+      addToast('info', `Declined request from ${request.senderDisplayName}`);
+    } catch (error) {
+      addToast('error', getErrorMessage(error));
+    }
   };
 
   return (
     <div className="flex items-center gap-3 p-4 bg-[#101827] rounded-xl border border-sky-300/20">
-      <Avatar name={request.fromDisplayName} src={request.fromAvatar} size="md" />
+      <Avatar name={request.senderDisplayName} src={request.senderAvatar} size="md" />
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-slate-100 leading-tight">{request.fromDisplayName}</p>
-        <p className="text-xs text-slate-500">@{request.fromUsername}</p>
+        <p className="font-semibold text-slate-100 leading-tight">{request.senderDisplayName}</p>
+        <p className="text-xs text-slate-500">{request.senderEmail}</p>
         <Badge variant="cyan" size="sm" className="mt-1">
           <Clock size={9} /> Wants to follow
         </Badge>
@@ -128,6 +78,7 @@ export function RequestCard({ request }: RequestCardProps) {
           size="xs"
           icon={<UserCheck size={12} />}
           onClick={handleAccept}
+          loading={respondMutation.isPending}
         >
           Accept
         </Button>
@@ -135,7 +86,8 @@ export function RequestCard({ request }: RequestCardProps) {
           variant="ghost"
           size="xs"
           icon={<X size={12} />}
-          onClick={handleReject}
+          onClick={handleDecline}
+          disabled={respondMutation.isPending}
         >
           Decline
         </Button>

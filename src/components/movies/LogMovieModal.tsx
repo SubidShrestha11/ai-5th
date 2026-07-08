@@ -1,17 +1,29 @@
-import { useState, useEffect } from 'react';
-import { Check, Globe, Lock } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Check } from 'lucide-react';
 import { Modal, Button, Input, StarRating } from '@/components/ui';
 import { useUIStore } from '@/store/uiStore';
-import { useMovieStore } from '@/store/movieStore';
 import { useAuthStore } from '@/store/authStore';
+import {
+  useCreateMovieLog,
+  useDeleteMovieLog,
+  useMovieLogs,
+  useUpdateMovieLog,
+} from '@/hooks/queries/movies';
+import { getErrorMessage } from '@/api/errors';
 import { posterUrl } from '@/lib/utils';
 
 export function LogMovieModal() {
   const { logMovieModal, closeLogModal, openAuthModal, addToast } = useUIStore();
-  const { addEntry, updateEntry, getEntry, removeEntry } = useMovieStore();
   const { isAuthenticated } = useAuthStore();
+  const { data: logs = [] } = useMovieLogs(isAuthenticated);
+  const createLogMutation = useCreateMovieLog();
+  const updateLogMutation = useUpdateMovieLog();
+  const deleteLogMutation = useDeleteMovieLog();
 
-  const existing = logMovieModal.movieId ? getEntry(logMovieModal.movieId) : undefined;
+  const existing = useMemo(
+    () => logs.find(log => log.movieId === logMovieModal.movieId),
+    [logs, logMovieModal.movieId]
+  );
 
   const [rating, setRating] = useState<number | null>(existing?.rating ?? null);
   const [review, setReview] = useState(existing?.review ?? '');
@@ -20,22 +32,25 @@ export function LogMovieModal() {
       ? new Date(existing.watchedAt).toISOString().split('T')[0]
       : new Date().toISOString().split('T')[0]
   );
-  const [isPublic, setIsPublic] = useState(existing?.isPublic ?? true);
 
   useEffect(() => {
     if (!logMovieModal.open) return;
-    const e = logMovieModal.movieId ? getEntry(logMovieModal.movieId) : undefined;
-    setRating(e?.rating ?? null);
-    setReview(e?.review ?? '');
+    const entry = logs.find(log => log.movieId === logMovieModal.movieId);
+    setRating(entry?.rating ?? null);
+    setReview(entry?.review ?? '');
     setWatchedAt(
-      e?.watchedAt
-        ? new Date(e.watchedAt).toISOString().split('T')[0]
+      entry?.watchedAt
+        ? new Date(entry.watchedAt).toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0]
     );
-    setIsPublic(e?.isPublic ?? true);
-  }, [logMovieModal.open, logMovieModal.movieId, getEntry]);
+  }, [logMovieModal.open, logMovieModal.movieId, logs]);
 
-  const handleSave = () => {
+  const saving =
+    createLogMutation.isPending ||
+    updateLogMutation.isPending ||
+    deleteLogMutation.isPending;
+
+  const handleSave = async () => {
     if (!isAuthenticated) {
       closeLogModal();
       openAuthModal('login');
@@ -43,32 +58,39 @@ export function LogMovieModal() {
     }
     if (!logMovieModal.movieId) return;
 
-    const entry = {
+    const payload = {
       movieId: logMovieModal.movieId,
-      movieTitle: logMovieModal.movieTitle,
-      moviePoster: logMovieModal.moviePoster,
-      movieYear: new Date().getFullYear().toString(),
-      watchedAt: new Date(watchedAt).toISOString(),
+      watchedAt,
       rating,
       review: review.trim() || null,
-      isPublic,
     };
 
-    if (existing) {
-      updateEntry(existing.id, entry);
-      addToast('success', `Updated log for "${logMovieModal.movieTitle}"`);
-    } else {
-      addEntry(entry);
-      addToast('success', `Logged "${logMovieModal.movieTitle}"`);
+    try {
+      if (existing) {
+        await updateLogMutation.mutateAsync({
+          logId: existing.id,
+          updates: payload,
+        });
+        addToast('success', `Updated log for "${logMovieModal.movieTitle}"`);
+      } else {
+        await createLogMutation.mutateAsync(payload);
+        addToast('success', `Logged "${logMovieModal.movieTitle}"`);
+      }
+      closeLogModal();
+    } catch (error) {
+      addToast('error', getErrorMessage(error));
     }
-    closeLogModal();
   };
 
-  const handleRemove = () => {
-    if (existing) {
-      removeEntry(existing.id);
+  const handleRemove = async () => {
+    if (!existing) return;
+
+    try {
+      await deleteLogMutation.mutateAsync(existing.id);
       addToast('info', `Removed "${logMovieModal.movieTitle}" from diary`);
       closeLogModal();
+    } catch (error) {
+      addToast('error', getErrorMessage(error));
     }
   };
 
@@ -83,7 +105,7 @@ export function LogMovieModal() {
       footer={
         <div className="flex gap-2">
           {existing && (
-            <Button variant="danger" size="sm" onClick={handleRemove}>
+            <Button variant="danger" size="sm" onClick={handleRemove} loading={saving}>
               Remove
             </Button>
           )}
@@ -91,7 +113,7 @@ export function LogMovieModal() {
           <Button variant="ghost" size="sm" onClick={closeLogModal}>
             Cancel
           </Button>
-          <Button variant="primary" size="sm" onClick={handleSave}>
+          <Button variant="primary" size="sm" onClick={handleSave} loading={saving}>
             <Check size={14} />
             {existing ? 'Update' : 'Save'}
           </Button>
@@ -99,7 +121,6 @@ export function LogMovieModal() {
       }
     >
       <div className="flex flex-col gap-5">
-        {/* Movie info */}
         <div className="flex gap-3 items-center">
           {poster ? (
             <img
@@ -116,7 +137,6 @@ export function LogMovieModal() {
           </div>
         </div>
 
-        {/* Rating */}
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-slate-300">Rating</label>
           <div className="flex items-center gap-3">
@@ -133,7 +153,6 @@ export function LogMovieModal() {
           </div>
         </div>
 
-        {/* Date */}
         <Input
           label="Watched on"
           type="date"
@@ -142,7 +161,6 @@ export function LogMovieModal() {
           max={new Date().toISOString().split('T')[0]}
         />
 
-        {/* Review */}
         <Input
           as="textarea"
           label="Review (optional)"
@@ -151,25 +169,6 @@ export function LogMovieModal() {
           onChange={e => setReview(e.target.value)}
           rows={3}
         />
-
-        {/* Privacy */}
-        <button
-          type="button"
-          onClick={() => setIsPublic(v => !v)}
-          className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 cursor-pointer ${
-            isPublic
-              ? 'border-sky-300/30 bg-sky-300/8 text-sky-300'
-              : 'border-white/10 bg-white/5 text-slate-400'
-          }`}
-        >
-          {isPublic ? <Globe size={16} /> : <Lock size={16} />}
-          <div className="text-left">
-            <p className="text-sm font-medium">{isPublic ? 'Public' : 'Private'}</p>
-            <p className="text-xs opacity-70">
-              {isPublic ? 'Friends can see this entry' : 'Only visible to you'}
-            </p>
-          </div>
-        </button>
       </div>
     </Modal>
   );

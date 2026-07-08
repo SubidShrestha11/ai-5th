@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { authService, mapApiUser } from '@/api';
+import { authService, mapUserProfile } from '@/api';
+import { tokenStorage } from '@/api/tokenStorage';
 import type { User } from '@/types';
 
 interface AuthState {
@@ -10,7 +11,7 @@ interface AuthState {
   setSession: (user: User) => void;
   clearSession: () => void;
   initialize: () => Promise<User | null>;
-  updateProfileLocal: (updates: Partial<Pick<User, 'displayName' | 'bio' | 'avatar'>>) => void;
+  updateProfileLocal: (updates: Partial<Pick<User, 'bio' | 'avatar' | 'displayName'>>) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -24,7 +25,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: {
             ...user,
-            displayName: user.displayName?.trim() || user.username || 'User',
+            displayName: user.displayName?.trim() || user.email.split('@')[0] || 'User',
           },
           isAuthenticated: true,
           isInitialized: true,
@@ -43,8 +44,8 @@ export const useAuthStore = create<AuthState>()(
         }
 
         try {
-          const apiUser = await authService.fetchCurrentUser();
-          const user = mapApiUser(apiUser);
+          const profile = await authService.fetchCurrentUser();
+          const user = mapUserProfile(profile);
           set({ user, isAuthenticated: true, isInitialized: true });
           return user;
         } catch {
@@ -66,6 +67,12 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => state => {
+        if (state && !tokenStorage.hasTokens()) {
+          state.user = null;
+          state.isAuthenticated = false;
+        }
+      },
     }
   )
 );

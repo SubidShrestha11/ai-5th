@@ -4,35 +4,49 @@ import {
   mapApiMovie,
   mapApiMovieDetail,
   mapApiMovieLog,
+  mapDiaryEntryToCreateRequest,
+  mapDiaryEntryToUpdateRequest,
 } from '@/api/mappers';
 import type {
   ApiMovieDetail,
   ApiMovieLog,
-  CreateMovieLogRequest,
   MovieSearchParams,
   PaginatedMovieLogsResponse,
-  PaginatedMoviesResponse,
-  UpdateMovieLogRequest,
+  TMDBBrowseResponse,
+  TMDBPaginatedResponse,
 } from '@/api/types/movies';
 import type { DiaryEntry, Movie, MovieDetail } from '@/types';
 
+async function browseMovies(params: MovieSearchParams = {}): Promise<TMDBBrowseResponse> {
+  return apiClient.get<TMDBBrowseResponse>(API_PATHS.movies.search, {
+    params: {
+      q: params.q,
+      page: params.page ?? 1,
+    },
+  });
+}
+
 export const moviesService = {
   async getPopular(page = 1): Promise<Movie[]> {
-    const data = await apiClient.get<PaginatedMoviesResponse | Movie[]>(
-      API_PATHS.movies.popular,
-      { params: { page } }
-    );
-    const movies = Array.isArray(data) ? data : data.results;
-    return movies.map(mapApiMovie);
+    const data = await apiClient.get<TMDBPaginatedResponse>(API_PATHS.movies.popular, {
+      params: { page },
+    });
+    return data.results.map(mapApiMovie);
   },
 
-  async searchMovies(params: MovieSearchParams): Promise<Movie[]> {
-    const data = await apiClient.get<PaginatedMoviesResponse | Movie[]>(
-      API_PATHS.movies.search,
-      { params: { q: params.q, page: params.page ?? 1 } }
-    );
-    const movies = Array.isArray(data) ? data : data.results;
-    return movies.map(mapApiMovie);
+  async searchMovies(params: MovieSearchParams): Promise<{
+    movies: Movie[];
+    status: TMDBBrowseResponse['status'];
+  }> {
+    const data = await browseMovies(params);
+    return {
+      movies: data.results.map(mapApiMovie),
+      status: data.status,
+    };
+  },
+
+  async browseMovies(params: MovieSearchParams = {}): Promise<TMDBBrowseResponse> {
+    return browseMovies(params);
   },
 
   async getMovieDetail(tmdbId: number): Promise<MovieDetail> {
@@ -41,46 +55,48 @@ export const moviesService = {
   },
 
   async listLogs(): Promise<DiaryEntry[]> {
-    const data = await apiClient.get<PaginatedMovieLogsResponse | ApiMovieLog[]>(
-      API_PATHS.movies.logs
-    );
-    const logs = Array.isArray(data) ? data : data.results;
-    return logs.map(mapApiMovieLog);
+    const entries: DiaryEntry[] = [];
+    let page = 1;
+
+    while (true) {
+      const data = await apiClient.get<PaginatedMovieLogsResponse>(API_PATHS.movies.logs, {
+        params: { page },
+      });
+      entries.push(...data.results.map(mapApiMovieLog));
+      if (!data.next) break;
+      page += 1;
+    }
+
+    return entries;
   },
 
-  async getLog(logId: string | number): Promise<DiaryEntry> {
+  async getLog(logId: string): Promise<DiaryEntry> {
     const data = await apiClient.get<ApiMovieLog>(API_PATHS.movies.log(logId));
     return mapApiMovieLog(data);
   },
 
-  async createLog(payload: CreateMovieLogRequest): Promise<DiaryEntry> {
-    const data = await apiClient.post<ApiMovieLog>(API_PATHS.movies.logs, payload);
+  async createLog(
+    entry: Pick<DiaryEntry, 'movieId' | 'rating' | 'review' | 'watchedAt'>
+  ): Promise<DiaryEntry> {
+    const data = await apiClient.post<ApiMovieLog>(
+      API_PATHS.movies.logs,
+      mapDiaryEntryToCreateRequest(entry)
+    );
     return mapApiMovieLog(data);
   },
 
   async updateLog(
-    logId: string | number,
-    payload: UpdateMovieLogRequest
+    logId: string,
+    updates: Partial<Pick<DiaryEntry, 'rating' | 'review' | 'watchedAt'>>
   ): Promise<DiaryEntry> {
     const data = await apiClient.patch<ApiMovieLog>(
       API_PATHS.movies.log(logId),
-      payload
+      mapDiaryEntryToUpdateRequest(updates)
     );
     return mapApiMovieLog(data);
   },
 
-  async replaceLog(
-    logId: string | number,
-    payload: CreateMovieLogRequest
-  ): Promise<DiaryEntry> {
-    const data = await apiClient.put<ApiMovieLog>(
-      API_PATHS.movies.log(logId),
-      payload
-    );
-    return mapApiMovieLog(data);
-  },
-
-  async deleteLog(logId: string | number): Promise<void> {
+  async deleteLog(logId: string): Promise<void> {
     await apiClient.delete(API_PATHS.movies.log(logId));
   },
 };

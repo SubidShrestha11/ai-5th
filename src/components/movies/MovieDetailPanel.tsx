@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Star, Clock, Calendar, Plus, Heart, ExternalLink } from 'lucide-react';
+import { Star, Clock, Calendar, Plus, ExternalLink } from 'lucide-react';
 import type { MovieDetail } from '@/types';
 import { backdropUrl, posterUrl, releaseYear, formatRuntime } from '@/lib/utils';
 import { Badge, Button, Avatar } from '@/components/ui';
 import { profileUrl } from '@/lib/utils';
-import { useMovieStore } from '@/store/movieStore';
+import { useLoggedMovies } from '@/hooks/useLoggedMovies';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 
@@ -17,7 +17,7 @@ export function MovieDetailPanel({ movie }: MovieDetailPanelProps) {
   const [tab, setTab] = useState<'cast' | 'crew'>('cast');
   const [imgError, setImgError] = useState(false);
 
-  const { isLogged, isFavorite, toggleFavorite } = useMovieStore();
+  const { isLogged } = useLoggedMovies();
   const { openLogModal } = useUIStore();
   const { isAuthenticated } = useAuthStore();
 
@@ -25,7 +25,6 @@ export function MovieDetailPanel({ movie }: MovieDetailPanelProps) {
   const poster = posterUrl(movie.poster_path, 'w500');
   const year = releaseYear(movie.release_date);
   const logged = isLogged(movie.id);
-  const faved = isFavorite(movie.id);
   const director = movie.credits.crew.find(c => c.job === 'Director');
 
   return (
@@ -105,15 +104,6 @@ export function MovieDetailPanel({ movie }: MovieDetailPanelProps) {
                   onClick={() => openLogModal(movie.id, movie.title, movie.poster_path)}
                 >
                   {logged ? 'Update Log' : 'Log Film'}
-                </Button>
-                <Button
-                  variant={faved ? 'ghost' : 'outline'}
-                  size="sm"
-                  icon={<Heart size={14} fill={faved ? 'currentColor' : 'none'} />}
-                  onClick={() => toggleFavorite(movie.id)}
-                  className={faved ? 'text-pink-400' : ''}
-                >
-                  {faved ? 'Favorited' : 'Favorite'}
                 </Button>
                 <a
                   href={`https://www.themoviedb.org/movie/${movie.id}`}

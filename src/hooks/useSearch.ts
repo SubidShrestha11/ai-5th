@@ -1,59 +1,55 @@
-import { useState, useEffect, useRef } from 'react';
-import type { Movie, User } from '@/types';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type { Movie } from '@/types';
 import { moviesService } from '@/api/services/moviesService';
-import { MOCK_MOVIES, MOCK_USERS } from '@/lib/mockData';
+import { getErrorMessage } from '@/api/errors';
 
 interface UseSearchResult {
   movies: Movie[];
-  users: User[];
   loading: boolean;
+  error: string | null;
   query: string;
   setQuery: (q: string) => void;
   clear: () => void;
 }
 
-function searchMock(query: string): { movies: Movie[]; users: User[] } {
-  const q = query.toLowerCase();
-  const movies = MOCK_MOVIES.filter(m =>
-    m.title.toLowerCase().includes(q) || m.overview.toLowerCase().includes(q)
-  );
-  const users = MOCK_USERS.filter(
-    u =>
-      u.username.toLowerCase().includes(q) ||
-      u.displayName.toLowerCase().includes(q)
-  );
-  return { movies, users };
+async function fetchSearchMovies(query: string): Promise<Movie[]> {
+  let result = await moviesService.searchMovies({ q: query });
+  let attempts = 0;
+
+  while (result.status === 'pending' && attempts < 5) {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    result = await moviesService.searchMovies({ q: query });
+    attempts += 1;
+  }
+
+  return result.movies;
 }
 
 export function useSearch(): UseSearchResult {
   const [query, setQueryState] = useState('');
   const [movies, setMovies] = useState<Movie[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!query.trim()) {
       setMovies([]);
-      setUsers([]);
+      setError(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setError(null);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      moviesService
-        .searchMovies({ q: query })
-        .then(results => {
-          setMovies(results.slice(0, 12));
-          setUsers([]);
-        })
-        .catch(() => {
-          const { movies: m, users: u } = searchMock(query);
-          setMovies(m);
-          setUsers(u);
+      fetchSearchMovies(query)
+        .then(results => setMovies(results.slice(0, 12)))
+        .catch(err => {
+          setMovies([]);
+          setError(getErrorMessage(err));
         })
         .finally(() => setLoading(false));
     }, 350);
@@ -63,12 +59,12 @@ export function useSearch(): UseSearchResult {
     };
   }, [query]);
 
-  const setQuery = (q: string) => setQueryState(q);
-  const clear = () => {
+  const setQuery = useCallback((q: string) => setQueryState(q), []);
+  const clear = useCallback(() => {
     setQueryState('');
     setMovies([]);
-    setUsers([]);
-  };
+    setError(null);
+  }, []);
 
-  return { movies, users, loading, query, setQuery, clear };
+  return { movies, loading, error, query, setQuery, clear };
 }

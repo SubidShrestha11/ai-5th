@@ -2,32 +2,33 @@ import { API_PATHS } from '@/api/config';
 import { apiClient } from '@/api/client';
 import { mapApiFriend, mapApiFriendRequest } from '@/api/mappers';
 import type {
-  ApiFriend,
-  ApiFriendRequest,
-  RespondToFriendRequestBody,
-  SendFriendRequestBody,
+  FriendRequest as ApiFriendRequest,
+  FriendRequestActionRequest,
+  FriendRequestCreateRequest,
+  FriendRequestDirection,
+  PaginatedFriendRequestList,
+  PaginatedFriendUserList,
 } from '@/api/types/friends';
 import type { Friend, FriendRequest } from '@/types';
 
 export const friendsService = {
   async listFriends(): Promise<Friend[]> {
-    const data = await apiClient.get<ApiFriend[] | { results: ApiFriend[] }>(
-      API_PATHS.friends.list
-    );
-    const friends = Array.isArray(data) ? data : data.results;
-    return friends.map(mapApiFriend);
+    const data = await apiClient.get<PaginatedFriendUserList>(API_PATHS.friends.list);
+    return data.results.map(mapApiFriend);
   },
 
-  async listFriendRequests(): Promise<FriendRequest[]> {
-    const data = await apiClient.get<ApiFriendRequest[] | { results: ApiFriendRequest[] }>(
-      API_PATHS.friends.requests
+  async listFriendRequests(
+    direction: FriendRequestDirection = 'incoming'
+  ): Promise<FriendRequest[]> {
+    const data = await apiClient.get<PaginatedFriendRequestList>(
+      API_PATHS.friends.requests,
+      { params: { direction } }
     );
-    const requests = Array.isArray(data) ? data : data.results;
-    return requests.map(mapApiFriendRequest);
+    return data.results.map(mapApiFriendRequest);
   },
 
-  async sendFriendRequest(userId: string | number): Promise<FriendRequest> {
-    const payload: SendFriendRequestBody = { user_id: userId };
+  async sendFriendRequest(receiverId: string): Promise<FriendRequest> {
+    const payload: FriendRequestCreateRequest = { receiver_id: receiverId };
     const response = await apiClient.post<ApiFriendRequest>(
       API_PATHS.friends.request,
       payload
@@ -36,17 +37,17 @@ export const friendsService = {
   },
 
   async respondToFriendRequest(
-    requestId: string | number,
-    status: RespondToFriendRequestBody['status']
+    requestId: string,
+    action: FriendRequestActionRequest['action']
   ): Promise<FriendRequest> {
     const response = await apiClient.patch<ApiFriendRequest>(
       API_PATHS.friends.respond(requestId),
-      { status } satisfies RespondToFriendRequestBody
+      { action } satisfies FriendRequestActionRequest
     );
     return mapApiFriendRequest(response);
   },
 
-  async removeFriend(userId: string | number): Promise<void> {
+  async removeFriend(userId: string): Promise<void> {
     await apiClient.delete(API_PATHS.friends.remove(userId));
   },
 };

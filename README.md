@@ -35,15 +35,15 @@ A premium cinematic social network — your personal film journal with social fe
 
 ## Environment Variables
 
-Copy `.env.example` to `.env.local` for local development:
+Copy `.env.example` to `.env.local` and set your backend URL:
 
 ```env
-VITE_API_BASE_URL=http://localhost:8000
+VITE_API_BASE_URL=https://your-api-host.example.com
 ```
 
 | Variable | Required | Description |
 |---|---|---|
-| `VITE_API_BASE_URL` | Yes (for auth/API) | Backend REST API base URL |
+| `VITE_API_BASE_URL` | Yes (for auth/API) | Backend REST API base URL (no trailing slash) |
 
 ## Run with Docker (no local npm needed)
 

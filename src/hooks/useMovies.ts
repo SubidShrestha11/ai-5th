@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Movie, MovieDetail } from '@/types';
 import { moviesService } from '@/api/services/moviesService';
-import { MOCK_MOVIES, MOCK_MOVIE_DETAIL } from '@/lib/mockData';
+import { getErrorMessage } from '@/api/errors';
 
 interface UseMoviesResult {
   movies: Movie[];
@@ -16,12 +16,13 @@ export function useTrending(): UseMoviesResult {
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     moviesService
-      .getPopular()
+      .getPopular(1)
       .then(setMovies)
-      .catch(() => {
-        setMovies(MOCK_MOVIES.slice(0, 10));
-        setError(null);
+      .catch(err => {
+        setMovies([]);
+        setError(getErrorMessage(err));
       })
       .finally(() => setLoading(false));
   }, []);
@@ -36,12 +37,13 @@ export function usePopular(): UseMoviesResult {
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     moviesService
-      .getPopular()
+      .getPopular(1)
       .then(setMovies)
-      .catch(() => {
-        setMovies([...MOCK_MOVIES].sort((a, b) => b.vote_count - a.vote_count).slice(0, 10));
-        setError(null);
+      .catch(err => {
+        setMovies([]);
+        setError(getErrorMessage(err));
       })
       .finally(() => setLoading(false));
   }, []);
@@ -55,9 +57,19 @@ export function useTopRated(): UseMoviesResult {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setMovies([...MOCK_MOVIES].sort((a, b) => b.vote_average - a.vote_average).slice(0, 10));
-    setLoading(false);
+    setLoading(true);
     setError(null);
+    moviesService
+      .getPopular(1)
+      .then(results =>
+        [...results].sort((a, b) => b.vote_average - a.vote_average).slice(0, 10)
+      )
+      .then(setMovies)
+      .catch(err => {
+        setMovies([]);
+        setError(getErrorMessage(err));
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   return { movies, loading, error };
@@ -79,33 +91,14 @@ export function useMovieDetail(movieId: number | null): {
     moviesService
       .getMovieDetail(movieId)
       .then(setMovie)
-      .catch(() => {
-        if (movieId === MOCK_MOVIE_DETAIL.id) {
-          setMovie(MOCK_MOVIE_DETAIL);
-        } else {
-          const found = MOCK_MOVIES.find(m => m.id === movieId);
-          if (found) {
-            setMovie({
-              ...found,
-              genres: found.genre_ids.map(id => ({ id, name: String(id) })),
-              runtime: 120,
-              tagline: '',
-              status: 'Released',
-              credits: { cast: [], crew: [] },
-            });
-          } else {
-            setError('Movie not found');
-          }
-        }
+      .catch(err => {
+        setMovie(null);
+        setError(getErrorMessage(err));
       })
       .finally(() => setLoading(false));
   }, [movieId]);
 
   return { movie, loading, error };
-}
-
-export function useMoviesByIds(ids: number[]): Movie[] {
-  return MOCK_MOVIES.filter(m => ids.includes(m.id));
 }
 
 export function useRecommendations(movieId: number | null): UseMoviesResult {
@@ -116,16 +109,16 @@ export function useRecommendations(movieId: number | null): UseMoviesResult {
   const fetchRecs = useCallback(() => {
     if (!movieId) return;
     setLoading(true);
-    const base = MOCK_MOVIES.find(m => m.id === movieId);
-    if (base) {
-      setMovies(
-        MOCK_MOVIES.filter(
-          m => m.id !== movieId && m.genre_ids.some(g => base.genre_ids.includes(g))
-        ).slice(0, 6)
-      );
-    }
     setError(null);
-    setLoading(false);
+    moviesService
+      .getPopular(1)
+      .then(results => results.filter(movie => movie.id !== movieId).slice(0, 6))
+      .then(setMovies)
+      .catch(err => {
+        setMovies([]);
+        setError(getErrorMessage(err));
+      })
+      .finally(() => setLoading(false));
   }, [movieId]);
 
   useEffect(() => {

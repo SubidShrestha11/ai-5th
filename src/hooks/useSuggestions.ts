@@ -1,30 +1,45 @@
 import { useState, useEffect } from 'react';
 import type { Movie } from '@/types';
-import { MOCK_MOVIES } from '@/lib/mockData';
-import { useMovieStore } from '@/store/movieStore';
+import { moviesService } from '@/api/services/moviesService';
+import { useLoggedMovies } from '@/hooks/useLoggedMovies';
+import { useAuthStore } from '@/store/authStore';
+import { getErrorMessage } from '@/api/errors';
 
-export function useSuggestions(): { movies: Movie[]; loading: boolean } {
+export function useSuggestions(): {
+  movies: Movie[];
+  loading: boolean;
+  error: string | null;
+} {
+  const { isAuthenticated } = useAuthStore();
+  const { logs } = useLoggedMovies();
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const { diary, favorites } = useMovieStore();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loggedIds = new Set([
-      ...diary.map(e => e.movieId),
-      ...favorites,
-    ]);
+    if (!isAuthenticated) {
+      setMovies([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
 
-    setMovies(getFallbackSuggestions(loggedIds));
-    setLoading(false);
-  }, [diary, favorites]);
+    const loggedIds = new Set(logs.map(log => log.movieId));
 
-  return { movies, loading };
-}
+    setLoading(true);
+    setError(null);
+    moviesService
+      .getPopular(1)
+      .then(results =>
+        results.filter(movie => !loggedIds.has(movie.id)).slice(0, 10)
+      )
+      .then(setMovies)
+      .catch(err => {
+        setMovies([]);
+        setError(getErrorMessage(err));
+      })
+      .finally(() => setLoading(false));
+  }, [isAuthenticated, logs]);
 
-function getFallbackSuggestions(loggedIds: Set<number>): Movie[] {
-  return [...MOCK_MOVIES]
-    .filter(m => !loggedIds.has(m.id))
-    .sort((a, b) => b.vote_average - a.vote_average)
-    .slice(0, 10);
+  return { movies, loading, error };
 }

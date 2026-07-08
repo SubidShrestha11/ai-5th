@@ -1,5 +1,10 @@
-import type { ApiUser } from '@/api/types/auth';
-import type { ApiFriend, ApiFriendRequest, ApiMovieLogSummary } from '@/api/types/friends';
+import { API_BASE_URL } from '@/api/config';
+import type { UserProfile } from '@/api/types/auth';
+import type {
+  FriendRequest as ApiFriendRequest,
+  FriendUser,
+} from '@/api/types/friends';
+import type { ApiFeedActivity } from '@/api/types/feed';
 import type { ApiMovie, ApiMovieDetail, ApiMovieLog } from '@/api/types/movies';
 import type {
   DiaryEntry,
@@ -7,111 +12,195 @@ import type {
   FriendRequest,
   Movie,
   MovieDetail,
+  FeedItem,
   User,
 } from '@/types';
+import { releaseYear } from '@/lib/utils';
 
 function toId(value: string | number): string {
   return String(value);
 }
 
-export function mapApiUser(user: ApiUser): User {
+export function emailLabel(email: string): string {
+  const local = email.split('@')[0]?.trim();
+  return local || email || 'User';
+}
+
+export function parseApiRating(rating: string | null | undefined): number | null {
+  if (rating == null || rating === '') return null;
+  const value = Number(rating);
+  return Number.isFinite(value) ? value : null;
+}
+
+export function formatApiRating(rating: number | null | undefined): string | null | undefined {
+  if (rating === undefined) return undefined;
+  if (rating === null) return null;
+  return String(rating);
+}
+
+function moviePosterPath(movie: ApiMovie): string | null {
+  return movie.poster_path ?? movie.poster_url ?? null;
+}
+
+function resolveMediaUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  if (path.startsWith('/')) {
+    return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
+  }
+  return path;
+}
+
+export function mapUserProfile(profile: UserProfile): User {
   return {
-    id: toId(user.id),
-    username: user.username,
-    displayName: user.display_name?.trim() || user.username || 'User',
-    email: user.email,
-    bio: user.bio ?? null,
-    avatar: user.profile_image ?? null,
-    createdAt: user.date_joined ?? new Date(0).toISOString(),
-    moviesWatched: user.movies_watched ?? 0,
+    id: toId(profile.id),
+    email: profile.email,
+    bio: profile.bio ?? '',
+    avatar: resolveMediaUrl(profile.profile_image),
+    createdAt: profile.created_at,
+    updatedAt: profile.updated_at,
+    displayName: emailLabel(profile.email),
   };
 }
 
-export function mapApiFriend(friend: ApiFriend): Friend {
+/** @deprecated Use mapUserProfile */
+export const mapApiUser = mapUserProfile;
+
+export function mapFriendUser(user: FriendUser): User {
   return {
-    id: toId(friend.id),
-    username: friend.username,
-    displayName: friend.display_name?.trim() || friend.username || 'User',
-    avatar: friend.profile_image ?? null,
-    moviesWatched: friend.movies_watched ?? 0,
-    recentActivity: friend.recent_activity
-      ? mapApiMovieLog(friend.recent_activity)
-      : null,
+    id: toId(user.id),
+    email: user.email,
+    bio: user.bio ?? '',
+    avatar: resolveMediaUrl(user.profile_image),
+    createdAt: '',
+    updatedAt: '',
+    displayName: emailLabel(user.email),
+  };
+}
+
+export function mapApiFriend(friend: FriendUser): Friend {
+  const user = mapFriendUser(friend);
+  return {
+    id: user.id,
+    email: user.email,
+    bio: user.bio,
+    avatar: user.avatar,
+    displayName: user.displayName,
+    recentActivity: null,
   };
 }
 
 export function mapApiFriendRequest(request: ApiFriendRequest): FriendRequest {
   return {
     id: toId(request.id),
-    fromUserId: toId(request.from_user.id),
-    fromUsername: request.from_user.username,
-    fromDisplayName:
-      request.from_user.display_name?.trim() || request.from_user.username || 'User',
-    fromAvatar: request.from_user.profile_image ?? null,
-    toUserId: toId(request.to_user.id),
-    status: request.status === 'declined' ? 'rejected' : request.status,
+    senderId: toId(request.sender.id),
+    senderEmail: request.sender.email,
+    senderDisplayName: emailLabel(request.sender.email),
+    senderAvatar: resolveMediaUrl(request.sender.profile_image),
+    receiverId: toId(request.receiver.id),
+    receiverEmail: request.receiver.email,
+    status: request.status,
     createdAt: request.created_at,
+    updatedAt: request.updated_at,
   };
 }
 
 export function mapApiMovie(movie: ApiMovie): Movie {
+  const releaseDate = movie.release_date ?? '';
   return {
-    id: movie.id,
+    id: movie.tmdb_id,
     title: movie.title,
-    poster_path: movie.poster_path,
-    backdrop_path: movie.backdrop_path,
-    release_date: movie.release_date,
+    poster_path: moviePosterPath(movie),
+    backdrop_path: null,
+    release_date: releaseDate,
     vote_average: movie.vote_average,
-    vote_count: movie.vote_count,
-    genre_ids: movie.genre_ids,
-    overview: movie.overview,
+    vote_count: 0,
+    genre_ids: [],
+    overview: movie.overview ?? '',
   };
 }
 
 export function mapApiMovieDetail(movie: ApiMovieDetail): MovieDetail {
+  const base = mapApiMovie(movie);
+  const genres = Array.isArray(movie.genres)
+    ? movie.genres
+        .map((genre, index) => {
+          if (typeof genre === 'object' && genre !== null && 'name' in genre) {
+            const name = String(genre.name);
+            const id = 'id' in genre && typeof genre.id === 'number' ? genre.id : index + 1;
+            return { id, name };
+          }
+          return null;
+        })
+        .filter((genre): genre is { id: number; name: string } => genre !== null)
+    : [];
+
   return {
-    ...mapApiMovie(movie),
-    genres: movie.genres,
-    runtime: movie.runtime,
-    tagline: movie.tagline,
-    status: movie.status,
-    credits: movie.credits ?? { cast: [], crew: [] },
+    ...base,
+    genres,
+    runtime: movie.runtime ?? 0,
+    tagline: '',
+    status: 'Released',
+    credits: { cast: [], crew: [] },
   };
 }
 
-export function mapApiMovieLog(log: ApiMovieLog | ApiMovieLogSummary): DiaryEntry {
+export function mapApiMovieLog(log: ApiMovieLog): DiaryEntry {
+  const movie = log.movie;
+  const poster = moviePosterPath(movie);
+  const releaseDate = movie.release_date ?? '';
+
   return {
     id: toId(log.id),
-    movieId: log.tmdb_id,
-    movieTitle: log.movie_title ?? 'Unknown title',
-    moviePoster: log.movie_poster ?? null,
-    movieYear: log.movie_year ?? '',
+    movieId: movie.tmdb_id,
+    movieTitle: movie.title,
+    moviePoster: poster,
+    movieYear: releaseYear(releaseDate),
     watchedAt: log.watched_date,
-    rating: log.rating ?? null,
-    review: log.review ?? null,
-    isPublic: 'is_public' in log ? (log.is_public ?? true) : true,
+    rating: parseApiRating(log.rating),
+    review: log.review_text?.trim() ? log.review_text : null,
+  };
+}
+
+export function mapApiFeedActivity(activity: ApiFeedActivity): FeedItem {
+  const movie = activity.movie;
+  const user = mapFriendUser(activity.user);
+  const hasReview = Boolean(activity.review_text?.trim());
+
+  return {
+    id: toId(activity.id),
+    type: hasReview ? 'review' : 'log',
+    userId: user.id,
+    userEmail: user.email,
+    displayName: user.displayName,
+    userAvatar: user.avatar,
+    movieId: movie.tmdb_id,
+    movieTitle: movie.title,
+    moviePoster: moviePosterPath(movie),
+    movieYear: releaseYear(movie.release_date ?? ''),
+    rating: parseApiRating(activity.rating) ?? undefined,
+    reviewText: activity.review_text?.trim() || undefined,
+    createdAt: activity.created_at,
   };
 }
 
 export function mapDiaryEntryToUpdateRequest(
-  updates: Partial<Pick<DiaryEntry, 'rating' | 'review' | 'watchedAt' | 'isPublic'>>
+  updates: Partial<Pick<DiaryEntry, 'rating' | 'review' | 'watchedAt'>>
 ) {
   return {
-    ...(updates.rating !== undefined ? { rating: updates.rating } : {}),
-    ...(updates.review !== undefined ? { review: updates.review } : {}),
+    ...(updates.rating !== undefined ? { rating: formatApiRating(updates.rating) } : {}),
+    ...(updates.review !== undefined ? { review_text: updates.review ?? '' } : {}),
     ...(updates.watchedAt !== undefined ? { watched_date: updates.watchedAt } : {}),
-    ...(updates.isPublic !== undefined ? { is_public: updates.isPublic } : {}),
   };
 }
 
 export function mapDiaryEntryToCreateRequest(
-  entry: Pick<DiaryEntry, 'movieId' | 'rating' | 'review' | 'watchedAt' | 'isPublic'>
+  entry: Pick<DiaryEntry, 'movieId' | 'rating' | 'review' | 'watchedAt'>
 ) {
   return {
     tmdb_id: entry.movieId,
-    rating: entry.rating,
-    review: entry.review,
+    rating: formatApiRating(entry.rating),
+    review_text: entry.review ?? '',
     watched_date: entry.watchedAt,
-    is_public: entry.isPublic,
   };
 }
