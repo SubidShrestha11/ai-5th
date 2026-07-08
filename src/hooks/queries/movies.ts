@@ -1,8 +1,35 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { mapApiMovie } from '@/api/mappers';
 import { moviesService } from '@/api/services/moviesService';
 import { queryKeys } from '@/api/queryKeys';
 import { getErrorMessage } from '@/api/errors';
-import type { DiaryEntry } from '@/types';
+import type { DiaryEntry, Movie } from '@/types';
+
+async function fetchBrowseMovies(page = 1): Promise<Movie[]> {
+  let data = await moviesService.browseMovies({ page });
+  let attempts = 0;
+
+  while (data.status === 'pending' && attempts < 5) {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    data = await moviesService.browseMovies({ page });
+    attempts += 1;
+  }
+
+  return data.results.map(mapApiMovie);
+}
+
+async function fetchSearchMovies(query: string, page = 1): Promise<Movie[]> {
+  let result = await moviesService.searchMovies({ q: query, page });
+  let attempts = 0;
+
+  while (result.status === 'pending' && attempts < 5) {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    result = await moviesService.searchMovies({ q: query, page });
+    attempts += 1;
+  }
+
+  return result.movies;
+}
 
 export function usePopularMovies(page = 1) {
   return useQuery({
@@ -11,21 +38,18 @@ export function usePopularMovies(page = 1) {
   });
 }
 
-export function useSearchMovies(query: string, enabled = query.trim().length > 0) {
+export function useSearchMovies(query: string, enabled = query.trim().length > 0, page = 1) {
   return useQuery({
-    queryKey: queryKeys.movies.search(query),
-    queryFn: async () => {
-      let result = await moviesService.searchMovies({ q: query });
-      let attempts = 0;
+    queryKey: queryKeys.movies.search(query, page),
+    queryFn: () => fetchSearchMovies(query, page),
+    enabled,
+  });
+}
 
-      while (result.status === 'pending' && attempts < 5) {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        result = await moviesService.searchMovies({ q: query });
-        attempts += 1;
-      }
-
-      return result.movies;
-    },
+export function useBrowseMovies(page = 1, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.movies.browse(page),
+    queryFn: () => fetchBrowseMovies(page),
     enabled,
   });
 }
@@ -43,6 +67,14 @@ export function useMovieLogs(enabled = true) {
     queryKey: queryKeys.movies.logs(),
     queryFn: () => moviesService.listLogs(),
     enabled,
+  });
+}
+
+export function useMovieLog(logId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.movies.log(logId ?? ''),
+    queryFn: () => moviesService.getLog(logId as string),
+    enabled: enabled && Boolean(logId),
   });
 }
 

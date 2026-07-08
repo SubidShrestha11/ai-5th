@@ -6,14 +6,17 @@ export {
   useSendFriendRequest,
   useRespondToFriendRequest,
   useRemoveFriend,
+  useFriendLogs,
 } from '@/hooks/queries/friends';
 export {
   usePopularMovies,
   useSearchMovies,
+  useBrowseMovies,
   useMovieDetails,
   useMovieLogs,
+  useMovieLog,
   useCreateMovieLog,
   useUpdateMovieLog,
   useDeleteMovieLog,
 } from '@/hooks/queries/movies';
-export { useCurrentUser, useUpdateProfile } from '@/hooks/queries/users';
+export { useCurrentUser, useUpdateProfile, useSearchUsers } from '@/hooks/queries/users';

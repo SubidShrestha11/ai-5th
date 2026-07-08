@@ -7,10 +7,11 @@ import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { useUpdateProfile } from '@/hooks/queries/users';
 import { useMovieLogs } from '@/hooks/queries/movies';
+import { useFriendLogs, useFriendsList } from '@/hooks/queries/friends';
 import { getErrorMessage } from '@/api/errors';
 import { formatDate, posterUrl, releaseYear } from '@/lib/utils';
 
-function DiaryEntryCard({ entry }: { entry: DiaryEntry }) {
+function DiaryEntryCard({ entry, readOnly = false }: { entry: DiaryEntry; readOnly?: boolean }) {
   const { openLogModal } = useUIStore();
   const poster = posterUrl(entry.moviePoster, 'w92');
 
@@ -47,13 +48,15 @@ function DiaryEntryCard({ entry }: { entry: DiaryEntry }) {
           </p>
         )}
       </div>
-      <button
-        onClick={() => openLogModal(entry.movieId, entry.movieTitle, entry.moviePoster)}
-        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/8 transition-all cursor-pointer shrink-0"
-        aria-label="Edit entry"
-      >
-        <Edit3 size={14} />
-      </button>
+      {!readOnly && (
+        <button
+          onClick={() => openLogModal(entry.movieId, entry.movieTitle, entry.moviePoster)}
+          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/8 transition-all cursor-pointer shrink-0"
+          aria-label="Edit entry"
+        >
+          <Edit3 size={14} />
+        </button>
+      )}
     </div>
   );
 }
@@ -62,17 +65,38 @@ export function ProfilePage() {
   const { userId } = useParams<{ userId: string }>();
   const { user, isAuthenticated } = useAuthStore();
   const updateProfileMutation = useUpdateProfile();
+  const isOwnProfile = isAuthenticated && (userId === 'me' || user?.id === userId);
+  const { data: friends = [] } = useFriendsList(isAuthenticated && !isOwnProfile);
+  const friend = friends.find(f => f.id === userId) ?? null;
+  const canViewFriendProfile = isAuthenticated && !isOwnProfile && Boolean(friend);
   const {
-    data: diary = [],
-    isLoading: logsLoading,
-    error: logsQueryError,
-  } = useMovieLogs(isAuthenticated && (userId === 'me' || user?.id === userId));
+    data: ownDiary = [],
+    isLoading: ownLogsLoading,
+    error: ownLogsQueryError,
+  } = useMovieLogs(isOwnProfile);
+  const {
+    data: friendDiary = [],
+    isLoading: friendLogsLoading,
+    error: friendLogsQueryError,
+  } = useFriendLogs(friend?.id ?? null, canViewFriendProfile);
+  const diary = isOwnProfile ? ownDiary : friendDiary;
+  const logsLoading = isOwnProfile ? ownLogsLoading : friendLogsLoading;
+  const logsQueryError = isOwnProfile ? ownLogsQueryError : friendLogsQueryError;
+  const profileUser = isOwnProfile
+    ? user
+    : friend
+      ? {
+          id: friend.id,
+          email: friend.email,
+          bio: friend.bio,
+          avatar: friend.avatar,
+          displayName: friend.displayName,
+        }
+      : null;
   const { addToast } = useUIStore();
   const [tab, setTab] = useState<'diary' | 'reviews'>('diary');
   const [editOpen, setEditOpen] = useState(false);
   const [editBio, setEditBio] = useState(user?.bio ?? '');
-
-  const isOwnProfile = isAuthenticated && (userId === 'me' || user?.id === userId);
 
   if (!userId) return <Navigate to="/" replace />;
 
@@ -80,10 +104,14 @@ export function ProfilePage() {
     return <Navigate to="/" replace />;
   }
 
-  if (!isOwnProfile) {
+  if (!isOwnProfile && !canViewFriendProfile) {
     return (
       <div className="text-center py-20">
-        <p className="text-slate-400">Only your own profile is available right now.</p>
+        <p className="text-slate-400">
+          {isAuthenticated
+            ? 'This profile is unavailable or you are not friends with this user.'
+            : 'Sign in to view friend profiles.'}
+        </p>
         <Link to="/" className="text-sky-400 hover:text-sky-300 mt-3 inline-block">
           Return home
         </Link>
@@ -125,26 +153,28 @@ export function ProfilePage() {
         <div className="px-6 pb-6 -mt-10 relative">
           <div className="flex items-end justify-between">
             <div className="ring-4 ring-[#101827] rounded-full">
-              <Avatar name={user!.displayName} src={user!.avatar} size="xl" />
+              <Avatar name={profileUser!.displayName} src={profileUser!.avatar} size="xl" />
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              icon={<Edit3 size={13} />}
-              onClick={() => {
-                setEditBio(user?.bio ?? '');
-                setEditOpen(true);
-              }}
-            >
-              Edit profile
-            </Button>
+            {isOwnProfile && (
+              <Button
+                variant="outline"
+                size="sm"
+                icon={<Edit3 size={13} />}
+                onClick={() => {
+                  setEditBio(user?.bio ?? '');
+                  setEditOpen(true);
+                }}
+              >
+                Edit profile
+              </Button>
+            )}
           </div>
 
           <div className="mt-4">
-            <h1 className="text-2xl font-bold font-serif text-white">{user!.displayName}</h1>
-            <p className="text-slate-500 text-sm">{user!.email}</p>
-            {user!.bio && (
-              <p className="text-slate-300 text-sm mt-2">{user!.bio}</p>
+            <h1 className="text-2xl font-bold font-serif text-white">{profileUser!.displayName}</h1>
+            <p className="text-slate-500 text-sm">{profileUser!.email}</p>
+            {profileUser!.bio && (
+              <p className="text-slate-300 text-sm mt-2">{profileUser!.bio}</p>
             )}
           </div>
 
@@ -213,7 +243,7 @@ export function ProfilePage() {
             </div>
           ) : (
             diary.map(entry => (
-              <DiaryEntryCard key={entry.id} entry={entry} />
+              <DiaryEntryCard key={entry.id} entry={entry} readOnly={!isOwnProfile} />
             ))
           )}
         </div>
@@ -264,29 +294,31 @@ export function ProfilePage() {
         </div>
       )}
 
-      <Modal
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
-        title="Edit Profile"
-        size="sm"
-        footer={
-          <div className="flex gap-2 justify-end">
-            <Button variant="ghost" size="sm" onClick={() => setEditOpen(false)}>Cancel</Button>
-            <Button variant="primary" size="sm" onClick={handleSaveProfile}>Save changes</Button>
+      {isOwnProfile && (
+        <Modal
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          title="Edit Profile"
+          size="sm"
+          footer={
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" size="sm" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button variant="primary" size="sm" onClick={handleSaveProfile}>Save changes</Button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <Input
+              as="textarea"
+              label="Bio"
+              value={editBio}
+              onChange={e => setEditBio(e.target.value)}
+              placeholder="Tell us about your taste in film..."
+              rows={3}
+            />
           </div>
-        }
-      >
-        <div className="space-y-4">
-          <Input
-            as="textarea"
-            label="Bio"
-            value={editBio}
-            onChange={e => setEditBio(e.target.value)}
-            placeholder="Tell us about your taste in film..."
-            rows={3}
-          />
-        </div>
-      </Modal>
+        </Modal>
+      )}
     </div>
   );
 }

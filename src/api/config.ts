@@ -28,5 +28,6 @@ export const API_PATHS = {
   },
   users: {
     me: '/api/v1/users/me/',
+    search: '/api/v1/users/search/',
   },
 } as const;

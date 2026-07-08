@@ -110,3 +110,11 @@ export function useRemoveFriend() {
     },
   });
 }
+
+export function useFriendLogs(userId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.friends.logs(userId ?? ''),
+    queryFn: () => friendsService.listFriendLogs(userId as string),
+    enabled: enabled && Boolean(userId),
+  });
+}

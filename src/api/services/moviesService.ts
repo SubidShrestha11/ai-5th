@@ -6,10 +6,13 @@ import {
   mapApiMovieLog,
   mapDiaryEntryToCreateRequest,
   mapDiaryEntryToUpdateRequest,
+  formatApiRating,
 } from '@/api/mappers';
+import type { PaginationParams } from '@/api/types/common';
 import type {
   ApiMovieDetail,
   ApiMovieLog,
+  MovieLogRequest,
   MovieSearchParams,
   PaginatedMovieLogsResponse,
   TMDBBrowseResponse,
@@ -54,13 +57,16 @@ export const moviesService = {
     return mapApiMovieDetail(data);
   },
 
-  async listLogs(): Promise<DiaryEntry[]> {
+  async listLogs(params: PaginationParams = {}): Promise<DiaryEntry[]> {
     const entries: DiaryEntry[] = [];
-    let page = 1;
+    let page = params.page ?? 1;
 
     while (true) {
       const data = await apiClient.get<PaginatedMovieLogsResponse>(API_PATHS.movies.logs, {
-        params: { page },
+        params: {
+          page,
+          page_size: params.page_size,
+        },
       });
       entries.push(...data.results.map(mapApiMovieLog));
       if (!data.next) break;
@@ -93,6 +99,20 @@ export const moviesService = {
       API_PATHS.movies.log(logId),
       mapDiaryEntryToUpdateRequest(updates)
     );
+    return mapApiMovieLog(data);
+  },
+
+  async replaceLog(
+    logId: string,
+    entry: Pick<DiaryEntry, 'movieId' | 'rating' | 'review' | 'watchedAt'>
+  ): Promise<DiaryEntry> {
+    const payload: MovieLogRequest = {
+      tmdb_id: entry.movieId,
+      watched_date: entry.watchedAt,
+      rating: formatApiRating(entry.rating) ?? null,
+      review_text: entry.review ?? '',
+    };
+    const data = await apiClient.put<ApiMovieLog>(API_PATHS.movies.log(logId), payload);
     return mapApiMovieLog(data);
   },
 
